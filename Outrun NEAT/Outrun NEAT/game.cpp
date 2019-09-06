@@ -42,6 +42,9 @@ https://youtu.be/KkMZI5Jbf18
 Last Updated: 10/07/2017
 */
 
+
+#include <SDL.h>
+#undef main
 #include <iostream>
 #include <string>
 using namespace std;
