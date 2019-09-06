@@ -1,7 +1,15 @@
 #include <SDL.h>
 #include "genome.h"
+#include "nodeGene.h"
 #undef main
 
-void genomeTesting(genome gen) {
+using namespace std;
+
+class genomeTesting {
+
+public:
+	void generateGenome(genome gen) {
 
 	}
+};
+

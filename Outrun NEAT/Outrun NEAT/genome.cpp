@@ -85,7 +85,7 @@ genome *genome::crossover(genome parent1, genome parent2)
 		for (auto connection2 : parent2.getConnections()) {
 			if (connection->getInnovation() == connection2->getInnovation()) {
 				sameInnovation = true;
-				if (rand() % 2 == 0)
+				if (rand() % 2 == 0 || !connection2->getExpressed())
 					child->addConnection(connection->connectionCopy());
 				else
 					child->addConnection(connection2->connectionCopy());
