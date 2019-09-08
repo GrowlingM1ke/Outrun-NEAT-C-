@@ -137,7 +137,7 @@
   <ItemGroup>
     <ClCompile Include="game.cpp" />
     <ClCompile Include="genome.cpp" />
-    <ClCompile Include="genomeTesting.cpp" />
+    <ClCompile Include="genomeRepresentation.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

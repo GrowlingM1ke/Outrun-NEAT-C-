@@ -112,6 +112,7 @@ Character Set -> Use Unicode. Thanks! - Javidx9
 #include <thread>
 #include <atomic>
 #include <condition_variable>
+#include <SDL.h>
 
 enum COLOUR
 {
@@ -293,6 +294,14 @@ public:
 
 class olcConsoleGameEngine
 {
+// SDL Related stuff
+private:
+	SDL_Renderer* renderer;
+
+public:
+	SDL_Renderer* getSDLRenderer() { return renderer; }
+// End of SDL related stuff
+
 public:
 	olcConsoleGameEngine()
 	{
@@ -779,8 +788,9 @@ public:
 	}
 
 public:
-	void Start()
+	void Start(SDL_Renderer *renderer)
 	{
+		this->renderer = renderer;
 		// Start the thread
 		m_bAtomActive = true;
 		std::thread t = std::thread(&olcConsoleGameEngine::GameThread, this);

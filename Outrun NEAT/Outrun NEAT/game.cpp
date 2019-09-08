@@ -42,14 +42,14 @@ https://youtu.be/KkMZI5Jbf18
 Last Updated: 10/07/2017
 */
 
-
-#include <SDL.h>
+#include "SDL.h"
 #undef main
 #include <iostream>
 #include <string>
 using namespace std;
 
 #include "olcConsoleGameEngine.h"
+
 
 
 class OneLoneCoder_FormulaOLC : public olcConsoleGameEngine
@@ -133,6 +133,18 @@ protected:
 	// Called by olcConsoleGameEngine
 	virtual bool OnUserUpdate(float fElapsedTime)
 	{
+		//SDL related stuff
+		SDL_SetRenderDrawColor(getSDLRenderer(), 0, 0, 0, 255);
+
+
+		SDL_RenderClear(getSDLRenderer());
+
+		SDL_SetRenderDrawColor(getSDLRenderer(), 255, 255, 255, SDL_ALPHA_OPAQUE);
+
+		SDL_RenderDrawLine(getSDLRenderer(), 0, 400, 600, 0);
+
+		SDL_RenderPresent(getSDLRenderer());
+
 		// Check if the roadblock exists
 		if (!exists) {
 			fRoadBlockVerticalPosition = generateBiasedRand(0.0, 0.7, false);
@@ -357,13 +369,38 @@ protected:
 	}
 };
 
+void genomeTest(SDL_Window *window, SDL_Renderer *renderer) {
+	
+
+	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+
+
+	SDL_RenderClear(renderer);
+
+	SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
+
+	SDL_RenderDrawLine(renderer, 0, 0, 600, 400);
+
+	SDL_RenderPresent(renderer);
+
+	SDL_Delay(3000);
+}
 
 int main()
 {
+
+	SDL_Init(SDL_INIT_EVERYTHING);
+	SDL_Window* window = SDL_CreateWindow("Genome Representation", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 600, 400, SDL_WINDOW_SHOWN);
+	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, 0);
+	
+	genomeTest(window, renderer);
+
 	// Use olcConsoleGameEngine derived app
 	OneLoneCoder_FormulaOLC game;
 	game.ConstructConsole(160, 100, 8, 8);
-	game.Start();
+	game.Start(renderer);
+
+	
 
 	return 0;
 }
