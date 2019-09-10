@@ -59,11 +59,7 @@ int main() {
 	Message_rect.w = nodeSize; // controls the width of the rect
 	Message_rect.h = nodeSize; // controls the height of the rect
 
-	//Mind you that (0,0) is on the top left of the window/screen, think a rect as the text's box, that way it would be very simple to understance
-
-	//Now since it's a texture, you have to put RenderCopy in your game loop area, the area where the whole code executes
-
-	SDL_RenderCopy(renderer, Message, NULL, &Message_rect); //you put the renderer's name first, the Message, the crop size(you can ignore this if you don't want to dabble with cropping), and the rect which is the size and coordinate of your texture
+	SDL_RenderCopy(renderer, Message, NULL, &Message_rect);
 
 	
 	// Draw the nodes
