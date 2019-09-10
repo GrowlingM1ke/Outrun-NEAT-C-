@@ -85,6 +85,7 @@ private:
 
 	list<float> listLapTimes;		// List of previous lap times
 	float fCurrentLapTime;			// Current lap time
+	int acc = 0;
 
 	
 
@@ -141,7 +142,8 @@ protected:
 
 		SDL_SetRenderDrawColor(getSDLRenderer(), 255, 255, 255, SDL_ALPHA_OPAQUE);
 
-		SDL_RenderDrawLine(getSDLRenderer(), 0, 400, 600, 0);
+		SDL_RenderDrawLine(getSDLRenderer(), 0, 400 - acc, 600 - acc, 0);
+		acc++;
 
 		SDL_RenderPresent(getSDLRenderer());
 
@@ -386,21 +388,21 @@ void genomeTest(SDL_Window *window, SDL_Renderer *renderer) {
 	SDL_Delay(3000);
 }
 
-int main()
-{
-
-	SDL_Init(SDL_INIT_EVERYTHING);
-	SDL_Window* window = SDL_CreateWindow("Genome Representation", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 600, 400, SDL_WINDOW_SHOWN);
-	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, 0);
-	
-	genomeTest(window, renderer);
-
-	// Use olcConsoleGameEngine derived app
-	OneLoneCoder_FormulaOLC game;
-	game.ConstructConsole(160, 100, 8, 8);
-	game.Start(renderer);
-
-	
-
-	return 0;
-}
+//int main()
+//{
+//
+//	SDL_Init(SDL_INIT_EVERYTHING);
+//	SDL_Window* window = SDL_CreateWindow("Genome Representation", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 600, 400, SDL_WINDOW_SHOWN);
+//	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, 0);
+//	
+//	genomeTest(window, renderer);
+//
+//	// Use olcConsoleGameEngine derived app
+//	OneLoneCoder_FormulaOLC game;
+//	game.ConstructConsole(160, 100, 8, 8);
+//	game.Start(renderer);
+//
+//	
+//
+//	return 0;
+//}
