@@ -36,7 +36,7 @@ void genome::addConnectionMutation() {
 	}
 
 	// Create connection
-	connectionGene* cg = new connectionGene(reversed ? node2.getId() : node1.getId(), reversed ? node1.getId() : node2.getId(), weight, true, innovation++);
+	connectionGene* cg = new connectionGene(reversed ? node2.getId() : node1.getId(), reversed ? node1.getId() : node2.getId(), weight, true);
 	connections.push_back(cg);
 
 }
@@ -52,9 +52,9 @@ void genome::addNode() {
 	connections[id]->setExpressed(true);
 
 	// Create the new node and connections
-	nodeGene* newNode = new nodeGene(TYPE::HIDDEN);
-	connectionGene *intoNew = new connectionGene(con.getInNode(), newNode->getId(), 1.0f, true, innovation++);
-	connectionGene *outNew = new connectionGene(newNode->getId(), con.getOutNode(), con.getWeight(), true, innovation++);
+	nodeGene* newNode = new nodeGene(TYPE::HIDDEN, 1);
+	connectionGene *intoNew = new connectionGene(con.getInNode(), newNode->getId(), 1.0f, true);
+	connectionGene *outNew = new connectionGene(newNode->getId(), con.getOutNode(), con.getWeight(), true);
 
 	nodes.push_back(newNode);
 	connections.push_back(intoNew);
@@ -62,7 +62,7 @@ void genome::addNode() {
 
 }
 
-genome *genome::crossover(genome parent1, genome parent2)
+genome* genome::crossover(genome parent1, genome parent2)
 {
 	// Make sure that genome1 has greater fitness
 	if (parent1.getFitness() < parent2.getFitness()) {

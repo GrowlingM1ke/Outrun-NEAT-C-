@@ -17,7 +17,7 @@ public:
 	genome();
 	void addConnectionMutation();
 	void addNode();
-	genome *crossover(genome parent1, genome parent2);
+	static genome *crossover(genome parent1, genome parent2);
 
 	float getFitness() { return fitness; }
 	vector<nodeGene*> getNodes() { return nodes; }

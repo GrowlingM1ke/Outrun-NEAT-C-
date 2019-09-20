@@ -46,6 +46,7 @@ Last Updated: 10/07/2017
 #undef main
 #include <iostream>
 #include <string>
+// TODO have the game be controlled by the neural network and fitness function
 using namespace std;
 
 #include "olcConsoleGameEngine.h"
@@ -399,7 +400,7 @@ void genomeTest(SDL_Window *window, SDL_Renderer *renderer) {
 //
 //	// Use olcConsoleGameEngine derived app
 //	OneLoneCoder_FormulaOLC game;
-//	game.ConstructConsole(160, 100, 8, 8);
+//	game.ConstructConsole(80, 100, 6, 6);
 //	game.Start(renderer);
 //
 //	

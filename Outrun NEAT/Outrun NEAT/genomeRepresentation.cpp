@@ -3,6 +3,11 @@
 #include <SDL_ttf.h>
 #include "genome.h"
 #include <map>
+#include <string>
+#include <sstream>
+#include <iomanip>
+
+using namespace std;
 
 int countNodesByType(genome *gen, TYPE type) {
 	int acc = 0;
@@ -13,23 +18,168 @@ int countNodesByType(genome *gen, TYPE type) {
 	return acc;
 }
 
+void drawNodes(genome *gen, SDL_Renderer* renderer, int screenSize){
+	// SDL Related variables
+	int nodeSize = screenSize / 25;
+	int connectionSizeBulb = nodeSize / 2;
+	map<int, vector<int>> m;
+
+	TTF_Font* font = TTF_OpenFont("arial.ttf", 24); //this opens a font style and sets a size
+
+	SDL_Color White = { 255, 255, 255 };  // this is the color in rgb format, maxing out all would give you the color white, and it will be your text's color
+
+	SDL_Color Black = { 0, 0, 0 };
+
+	SDL_Color Red = { 255, 0, 0 };
+
+	SDL_Surface* surfaceMessage = TTF_RenderText_Solid(font, "2", White); // as TTF_RenderText_Solid could only be used on SDL_Surface then you have to create the surface first
+
+	SDL_Texture* Message = SDL_CreateTextureFromSurface(renderer, surfaceMessage); //now you can convert it into a texture
+
+	SDL_Rect Message_rect; //create a rect
+	Message_rect.x = 0;  //controls the rect's x coordinate 
+	Message_rect.y = 0; // controls the rect's y coordinte
+	Message_rect.w = nodeSize; // controls the width of the rect
+	Message_rect.h = nodeSize; // controls the height of the rect
+
+	// Draw the nodes
+	for (nodeGene* gene : gen->getNodes()) {
+		if (gene->getTYPE() == TYPE::INPUT) {
+			SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
+			float x = ((float)(gene->getId() - 1) / ((float)countNodesByType(gen, TYPE::INPUT) + 1.0f)) * screenSize + nodeSize;
+			float y = screenSize - nodeSize / 2;
+			SDL_Rect* rect = new SDL_Rect();
+			rect->x = x - nodeSize / 2;
+			rect->y = y - nodeSize / 2;
+			rect->w = nodeSize;
+			rect->h = nodeSize;
+			SDL_RenderFillRect(renderer, rect);
+
+			m[gene->getId()].push_back((int)x);
+			m[gene->getId()].push_back((int)y);
+		}
+		else if (gene->getTYPE() == TYPE::HIDDEN) {
+			int x = rand() % (screenSize - nodeSize * 2) + nodeSize;
+			int y = rand() % (screenSize - nodeSize * 3) + nodeSize * 1.5f;
+			SDL_Rect* rect = new SDL_Rect();
+			rect->x = x - nodeSize / 2;
+			rect->y = y - nodeSize / 2;
+			rect->w = nodeSize;
+			rect->h = nodeSize;
+			SDL_RenderFillRect(renderer, rect);
+
+			m[gene->getId()].push_back((int)x);
+			m[gene->getId()].push_back((int)y);
+		}
+		else if (gene->getTYPE() == TYPE::OUTPUT) {
+			float x = ((float)(gene->getId() - 1) / ((float)countNodesByType(gen, TYPE::INPUT) + 1.0f)) * screenSize;
+			float y = nodeSize / 2;
+			SDL_Rect* rect = new SDL_Rect();
+			rect->x = x - nodeSize / 2;
+			rect->y = y - nodeSize / 2;
+			rect->w = nodeSize;
+			rect->h = nodeSize;
+			SDL_RenderFillRect(renderer, rect);
+
+			m[gene->getId()].push_back((int)x);
+			m[gene->getId()].push_back((int)y);
+		}
+	}
+
+	for (connectionGene* connection : gen->getConnections()) {
+		if (!connection->getExpressed()) {
+			continue;
+		}
+		vector<int> inNode = m[connection->getInNode()];
+		vector<int> outNode = m[connection->getOutNode()];
+
+		int x = (outNode.at(0) - inNode.at(0));
+		int y = (outNode.at(1) - inNode.at(1));
+		SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
+		SDL_RenderDrawLine(renderer, inNode.at(0), inNode.at(1), inNode.at(0) + x, inNode.at(1) + y);
+
+		// Indicate direction
+		SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+		SDL_Rect* rect = new SDL_Rect();
+		rect->x = inNode.at(0) + x * 0.8f - connectionSizeBulb / 2;
+		rect->y = inNode.at(1) + y * 0.8f - connectionSizeBulb / 2;
+		rect->w = connectionSizeBulb;
+		rect->h = connectionSizeBulb;
+		SDL_RenderFillRect(renderer, rect);
+
+		// Write down weight
+		std::stringstream stream;
+		stream << std::fixed << std::setprecision(2) << connection->getWeight();
+		string id = stream.str();
+		surfaceMessage = TTF_RenderText_Solid(font, id.c_str(), White);
+		Message = SDL_CreateTextureFromSurface(renderer, surfaceMessage);
+		Message_rect.x = inNode.at(0) + x * 0.5f - connectionSizeBulb / 2 * 3;
+		Message_rect.y = inNode.at(1) + y * 0.5f - connectionSizeBulb;
+		Message_rect.w = connectionSizeBulb * 3;
+		Message_rect.h = connectionSizeBulb * 2;
+		SDL_RenderCopy(renderer, Message, NULL, &Message_rect);
+	}
+
+	// Render text
+	for (auto const& x : m)
+	{
+		string id = to_string(x.first);
+		surfaceMessage = TTF_RenderText_Solid(font, id.c_str(), Black);
+		Message = SDL_CreateTextureFromSurface(renderer, surfaceMessage);
+		Message_rect.x = x.second.at(0) - nodeSize / 2;
+		Message_rect.y = x.second.at(1) - nodeSize / 2;
+		Message_rect.w = nodeSize;
+		Message_rect.h = nodeSize;
+		SDL_RenderCopy(renderer, Message, NULL, &Message_rect);
+	}
+
+	SDL_RenderPresent(renderer);
+}
+
 int main() {
-	// Create the genomes
+
+	int screenSize = 500;
+
+	// Parent 1
 	genome* parent1 = new genome();
 	for (int i = 0; i < 3; i++) {
-		nodeGene* node = new nodeGene(TYPE::INPUT);
+		nodeGene* node = new nodeGene(TYPE::INPUT, i + 1);
 		parent1->addNode(node);
 	}
 
-	parent1->addNode(new nodeGene(TYPE::OUTPUT));
-	parent1->addNode(new nodeGene(TYPE::HIDDEN));
+	parent1->addNode(new nodeGene(TYPE::OUTPUT, 4));
+	parent1->addNode(new nodeGene(TYPE::HIDDEN, 5));
 
-	// SDL Related variables
-	int screenSize = 800;
-	int nodeSize = screenSize / 25;
-	map<int, int*> m;
+	parent1->addConnection(new connectionGene(1, 4, 1.0f, true, 1));
+	parent1->addConnection(new connectionGene(2, 4, 1.0f, false, 2));
+	parent1->addConnection(new connectionGene(3, 4, 1.0f, true, 3));
+	parent1->addConnection(new connectionGene(2, 5, 1.0f, true, 4));
+	parent1->addConnection(new connectionGene(5, 4, 1.0f, true, 5));
+	parent1->addConnection(new connectionGene(1, 5, 1.0f, true, 8));
 
+	// Parent 2
 
+	genome* parent2 = new genome();
+	for (int i = 0; i < 3; i++) {
+		nodeGene* node = new nodeGene(TYPE::INPUT, i + 1);
+		parent2->addNode(node);
+	}
+	parent2->addNode(new nodeGene(TYPE::OUTPUT, 4));
+	parent2->addNode(new nodeGene(TYPE::HIDDEN, 5));
+	parent2->addNode(new nodeGene(TYPE::HIDDEN, 6));
+
+	parent2->addConnection(new connectionGene(1, 4, 1.0f, true, 1));
+	parent2->addConnection(new connectionGene(2, 4, 1.0f, false, 2));
+	parent2->addConnection(new connectionGene(3, 4, 1.0f, true, 3));
+	parent2->addConnection(new connectionGene(2, 5, 1.0f, true, 4));
+	parent2->addConnection(new connectionGene(5, 4, 1.0f, false, 5));
+	parent2->addConnection(new connectionGene(5, 6, 1.0f, true, 6));
+	parent2->addConnection(new connectionGene(6, 4, 1.0f, true, 7));
+	parent2->addConnection(new connectionGene(3, 5, 1.0f, true, 9));
+	parent2->addConnection(new connectionGene(1, 6, 1.0f, true, 10));
+
+	// Child
+	genome *child = genome::crossover(*parent2, *parent1);
 	SDL_Init(SDL_INIT_EVERYTHING);
 	SDL_Window* window = SDL_CreateWindow("Genome Representation", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, screenSize, screenSize, SDL_WINDOW_SHOWN);
 	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, 0);
@@ -45,71 +195,8 @@ int main() {
 	// Stuff for writing a message
 	TTF_Init();
 
-	TTF_Font* font = TTF_OpenFont("arial.ttf", 24); //this opens a font style and sets a size
-
-	SDL_Color White = { 255, 255, 255 };  // this is the color in rgb format, maxing out all would give you the color white, and it will be your text's color
-
-	SDL_Surface* surfaceMessage = TTF_RenderText_Solid(font, "put your text here", White); // as TTF_RenderText_Solid could only be used on SDL_Surface then you have to create the surface first
-
-	SDL_Texture* Message = SDL_CreateTextureFromSurface(renderer, surfaceMessage); //now you can convert it into a texture
-
-	SDL_Rect Message_rect; //create a rect
-	Message_rect.x = 0;  //controls the rect's x coordinate 
-	Message_rect.y = 0; // controls the rect's y coordinte
-	Message_rect.w = nodeSize; // controls the width of the rect
-	Message_rect.h = nodeSize; // controls the height of the rect
-
-	SDL_RenderCopy(renderer, Message, NULL, &Message_rect);
-
+	drawNodes(child, renderer, screenSize);
 	
-	// Draw the nodes
-	for (nodeGene* gene : parent1->getNodes()) {
-		if (gene->getTYPE() == TYPE::INPUT) {
-			SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
-			float x = ((float)gene->getId() / ((float)countNodesByType(parent1, TYPE::INPUT) + 1.0f)) * screenSize + nodeSize;
-			float y = screenSize - nodeSize / 2;
-			SDL_Rect *rect = new SDL_Rect();
-			rect->x = x - nodeSize / 2;
-			rect->y = y - nodeSize / 2;
-			rect->w = nodeSize;
-			rect->h = nodeSize;
-			SDL_RenderFillRect(renderer, rect);
-
-			int coordinates[2] = { (int)x, (int)y };
-			m[gene->getId()] = coordinates;
-		}
-		else if (gene->getTYPE() == TYPE::HIDDEN) {
-			int x = rand() % (screenSize - nodeSize * 2) + nodeSize;
-			int y = rand() % (screenSize - nodeSize * 3) + nodeSize * 1.5f;
-			SDL_Rect* rect = new SDL_Rect();
-			rect->x = x - nodeSize / 2;
-			rect->y = y - nodeSize / 2;
-			rect->w = nodeSize;
-			rect->h = nodeSize;
-			SDL_RenderFillRect(renderer, rect);
-
-			int coordinates[2] = { (int)x, (int)y };
-			m[gene->getId()] = coordinates;
-		}
-		else if (gene->getTYPE() == TYPE::OUTPUT) {
-			float x = ((float)gene->getId() / ((float)countNodesByType(parent1, TYPE::INPUT) + 1.0f)) * screenSize;
-			float y = nodeSize / 2;
-			SDL_Rect* rect = new SDL_Rect();
-			rect->x = x - nodeSize / 2;
-			rect->y = y - nodeSize / 2;
-			rect->w = nodeSize;
-			rect->h = nodeSize;
-			SDL_RenderFillRect(renderer, rect);
-
-			int coordinates[2] = { (int)x, (int)y };
-			m[gene->getId()] = coordinates;
-		}
-	}
-
-
-	//SDL_RenderDrawLine(renderer, 0, 0, screenSize, screenSize);
-
-	SDL_RenderPresent(renderer);
 
 	while (true)
 	{
@@ -120,10 +207,10 @@ int main() {
 			if (event.type == SDL_QUIT)
 			{
 				// Break out of the loop on quit
-				TTF_Quit();
+				/*TTF_Quit();
 				TTF_CloseFont(font);
 				SDL_DestroyTexture(Message);
-				SDL_FreeSurface(surfaceMessage);
+				SDL_FreeSurface(surfaceMessage);*/
 				break;
 			}
 		}

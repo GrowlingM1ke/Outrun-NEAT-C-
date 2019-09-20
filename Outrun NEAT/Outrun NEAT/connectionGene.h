@@ -2,7 +2,7 @@
 
 using namespace std;
 
-static int innovation = 0;
+static int innovationGlobal = 0;
 
 class connectionGene {
 private:
@@ -14,6 +14,14 @@ private:
 	int innovation;
 
 public:
+	connectionGene(int inNode, int outNode, float weight, bool expressed) {
+		this->inNode = inNode;
+		this->outNode = outNode;
+		this->weight = weight;
+		this->expressed = expressed;
+		this->innovation = innovationGlobal++;
+	}
+
 	connectionGene(int inNode, int outNode, float weight, bool expressed, int innovation) {
 		this->inNode = inNode;
 		this->outNode = outNode;
