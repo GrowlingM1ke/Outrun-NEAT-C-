@@ -4,25 +4,42 @@
 #include "connectionGene.h"
 
 using namespace std;
+static int globalID = 0;
 
 class genome {
 private:
 
-	vector<connectionGene *> connections;
-	vector<nodeGene *> nodes;
-	float fitness;
+	vector<connectionGene> connections;
+	vector<nodeGene> nodes;
+	static bool contains(vector<int> list1, int index);
+	float fitness = 0.0f;
+	int id = 0;
 
 
 public:
+	// for the comparator
+	bool operator <(const genome& rhs) const
+	{
+		return id < rhs.id;
+	}
+
 	genome();
 	void addConnectionMutation();
 	void addNode();
-	static genome *crossover(genome parent1, genome parent2);
+	static genome crossover(genome parent1, genome parent2);
+
+	vector<nodeGene> getNodes() { return nodes; }
+	void addNode(nodeGene node) { nodes.push_back(node); }
+
+	vector<connectionGene> getConnections() { return connections; }
+	void addConnection(connectionGene connection) { connections.push_back(connection); }
+	void mutation();
+	vector<int> getInnovationsSorted();
+	vector<int> getNodeIdSorted();
+
+	float getWeightByIndex(int innovation);
+	static float compatibilityDistance(genome genome1, genome genome2, float c1, float c2, float c3);
 
 	float getFitness() { return fitness; }
-	vector<nodeGene*> getNodes() { return nodes; }
-	void addNode(nodeGene* node) { nodes.push_back(node); }
-
-	vector<connectionGene*> getConnections() { return connections; }
-	void addConnection(connectionGene* connection) { connections.push_back(connection); }
+	void setFitness(float fitness) { this->fitness = fitness; }
 };

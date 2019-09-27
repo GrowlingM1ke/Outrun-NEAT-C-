@@ -1,24 +1,26 @@
 #include "SDL.h"
 #undef main
 #include <SDL_ttf.h>
+#include "neuralNetwork.h"
 #include "genome.h"
 #include <map>
 #include <string>
 #include <sstream>
 #include <iomanip>
+#include <iostream>
 
 using namespace std;
 
-int countNodesByType(genome *gen, TYPE type) {
+int countNodesByType(genome gen, TYPE type) {
 	int acc = 0;
-	for (nodeGene *ng : gen->getNodes()) {
-		if (ng->getTYPE() == type)
+	for (nodeGene ng : gen.getNodes()) {
+		if (ng.getTYPE() == type)
 			acc++;
 	}
 	return acc;
 }
 
-void drawNodes(genome *gen, SDL_Renderer* renderer, int screenSize){
+void drawNodes(genome gen, SDL_Renderer* renderer, int screenSize){
 	// SDL Related variables
 	int nodeSize = screenSize / 25;
 	int connectionSizeBulb = nodeSize / 2;
@@ -43,10 +45,10 @@ void drawNodes(genome *gen, SDL_Renderer* renderer, int screenSize){
 	Message_rect.h = nodeSize; // controls the height of the rect
 
 	// Draw the nodes
-	for (nodeGene* gene : gen->getNodes()) {
-		if (gene->getTYPE() == TYPE::INPUT) {
+	for (nodeGene gene : gen.getNodes()) {
+		if (gene.getTYPE() == TYPE::INPUT) {
 			SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
-			float x = ((float)(gene->getId() - 1) / ((float)countNodesByType(gen, TYPE::INPUT) + 1.0f)) * screenSize + nodeSize;
+			float x = ((float)(gene.getId() - 1) / ((float)countNodesByType(gen, TYPE::INPUT) + 1.0f)) * screenSize + nodeSize;
 			float y = screenSize - nodeSize / 2;
 			SDL_Rect* rect = new SDL_Rect();
 			rect->x = x - nodeSize / 2;
@@ -55,10 +57,10 @@ void drawNodes(genome *gen, SDL_Renderer* renderer, int screenSize){
 			rect->h = nodeSize;
 			SDL_RenderFillRect(renderer, rect);
 
-			m[gene->getId()].push_back((int)x);
-			m[gene->getId()].push_back((int)y);
+			m[gene.getId()].push_back((int)x);
+			m[gene.getId()].push_back((int)y);
 		}
-		else if (gene->getTYPE() == TYPE::HIDDEN) {
+		else if (gene.getTYPE() == TYPE::HIDDEN) {
 			int x = rand() % (screenSize - nodeSize * 2) + nodeSize;
 			int y = rand() % (screenSize - nodeSize * 3) + nodeSize * 1.5f;
 			SDL_Rect* rect = new SDL_Rect();
@@ -68,11 +70,11 @@ void drawNodes(genome *gen, SDL_Renderer* renderer, int screenSize){
 			rect->h = nodeSize;
 			SDL_RenderFillRect(renderer, rect);
 
-			m[gene->getId()].push_back((int)x);
-			m[gene->getId()].push_back((int)y);
+			m[gene.getId()].push_back((int)x);
+			m[gene.getId()].push_back((int)y);
 		}
-		else if (gene->getTYPE() == TYPE::OUTPUT) {
-			float x = ((float)(gene->getId() - 1) / ((float)countNodesByType(gen, TYPE::INPUT) + 1.0f)) * screenSize;
+		else if (gene.getTYPE() == TYPE::OUTPUT) {
+			float x = ((float)(gene.getId() - 1) / ((float)countNodesByType(gen, TYPE::INPUT) + 1.0f)) * screenSize;
 			float y = nodeSize / 2;
 			SDL_Rect* rect = new SDL_Rect();
 			rect->x = x - nodeSize / 2;
@@ -81,17 +83,17 @@ void drawNodes(genome *gen, SDL_Renderer* renderer, int screenSize){
 			rect->h = nodeSize;
 			SDL_RenderFillRect(renderer, rect);
 
-			m[gene->getId()].push_back((int)x);
-			m[gene->getId()].push_back((int)y);
+			m[gene.getId()].push_back((int)x);
+			m[gene.getId()].push_back((int)y);
 		}
 	}
 
-	for (connectionGene* connection : gen->getConnections()) {
-		if (!connection->getExpressed()) {
+	for (connectionGene connection : gen.getConnections()) {
+		if (!connection.getExpressed()) {
 			continue;
 		}
-		vector<int> inNode = m[connection->getInNode()];
-		vector<int> outNode = m[connection->getOutNode()];
+		vector<int> inNode = m[connection.getInNode()];
+		vector<int> outNode = m[connection.getOutNode()];
 
 		int x = (outNode.at(0) - inNode.at(0));
 		int y = (outNode.at(1) - inNode.at(1));
@@ -109,7 +111,7 @@ void drawNodes(genome *gen, SDL_Renderer* renderer, int screenSize){
 
 		// Write down weight
 		std::stringstream stream;
-		stream << std::fixed << std::setprecision(2) << connection->getWeight();
+		stream << std::fixed << std::setprecision(2) << connection.getWeight();
 		string id = stream.str();
 		surfaceMessage = TTF_RenderText_Solid(font, id.c_str(), White);
 		Message = SDL_CreateTextureFromSurface(renderer, surfaceMessage);
@@ -141,45 +143,58 @@ int main() {
 	int screenSize = 500;
 
 	// Parent 1
-	genome* parent1 = new genome();
+	genome parent1 = genome();
 	for (int i = 0; i < 3; i++) {
-		nodeGene* node = new nodeGene(TYPE::INPUT, i + 1);
-		parent1->addNode(node);
+		nodeGene node = nodeGene(TYPE::INPUT, i + 1);
+		parent1.addNode(node);
 	}
 
-	parent1->addNode(new nodeGene(TYPE::OUTPUT, 4));
-	parent1->addNode(new nodeGene(TYPE::HIDDEN, 5));
+	parent1.addNode(nodeGene(TYPE::OUTPUT, 4));
+	parent1.addNode(nodeGene(TYPE::HIDDEN, 5));
 
-	parent1->addConnection(new connectionGene(1, 4, 1.0f, true, 1));
-	parent1->addConnection(new connectionGene(2, 4, 1.0f, false, 2));
-	parent1->addConnection(new connectionGene(3, 4, 1.0f, true, 3));
-	parent1->addConnection(new connectionGene(2, 5, 1.0f, true, 4));
-	parent1->addConnection(new connectionGene(5, 4, 1.0f, true, 5));
-	parent1->addConnection(new connectionGene(1, 5, 1.0f, true, 8));
+	parent1.addConnection(connectionGene(1, 4, 1.0f, true, 1));
+	parent1.addConnection(connectionGene(2, 4, 1.0f, false, 2));
+	parent1.addConnection(connectionGene(3, 4, 1.0f, true, 3));
+	parent1.addConnection(connectionGene(2, 5, 1.0f, true, 4));
+	parent1.addConnection(connectionGene(5, 4, 1.0f, true, 9));
+	parent1.addConnection(connectionGene(1, 5, 1.0f, true, 8));
 
+	srand(time(0));
+	// parent1.addNode();
+	// Make sure a connection between input and input doesn't exist
+	// Make sure there is a check if everything is already taken
+	// parent1.addConnectionMutation();
+	// parent1.mutation();
+	neuralNetwork neuralN = neuralNetwork(parent1);
+	//vector<float> inputs;
+	//inputs.push_back(1);
+	//inputs.push_back(1);
+	//vector<float> outputs = neuralN.calculate(inputs);
 	// Parent 2
 
-	genome* parent2 = new genome();
+	genome parent2 = genome();
 	for (int i = 0; i < 3; i++) {
-		nodeGene* node = new nodeGene(TYPE::INPUT, i + 1);
-		parent2->addNode(node);
+		nodeGene node = nodeGene(TYPE::INPUT, i + 1);
+		parent2.addNode(node);
 	}
-	parent2->addNode(new nodeGene(TYPE::OUTPUT, 4));
-	parent2->addNode(new nodeGene(TYPE::HIDDEN, 5));
-	parent2->addNode(new nodeGene(TYPE::HIDDEN, 6));
+	parent2.addNode(nodeGene(TYPE::OUTPUT, 4));
+	parent2.addNode(nodeGene(TYPE::HIDDEN, 5));
+	parent2.addNode(nodeGene(TYPE::HIDDEN, 6));
 
-	parent2->addConnection(new connectionGene(1, 4, 1.0f, true, 1));
-	parent2->addConnection(new connectionGene(2, 4, 1.0f, false, 2));
-	parent2->addConnection(new connectionGene(3, 4, 1.0f, true, 3));
-	parent2->addConnection(new connectionGene(2, 5, 1.0f, true, 4));
-	parent2->addConnection(new connectionGene(5, 4, 1.0f, false, 5));
-	parent2->addConnection(new connectionGene(5, 6, 1.0f, true, 6));
-	parent2->addConnection(new connectionGene(6, 4, 1.0f, true, 7));
-	parent2->addConnection(new connectionGene(3, 5, 1.0f, true, 9));
-	parent2->addConnection(new connectionGene(1, 6, 1.0f, true, 10));
+	parent2.addConnection(connectionGene(1, 4, 1.0f, true, 1));
+	parent2.addConnection(connectionGene(2, 4, 1.0f, false, 2));
+	parent2.addConnection(connectionGene(3, 4, 1.0f, true, 3));
+	parent2.addConnection(connectionGene(2, 5, 1.0f, true, 4));
+	parent2.addConnection(connectionGene(5, 4, 1.0f, false, 5));
+	parent2.addConnection(connectionGene(5, 6, 1.0f, true, 6));
+	parent2.addConnection(connectionGene(6, 4, 1.0f, true, 7));
+	parent2.addConnection(connectionGene(3, 5, 1.0f, true, 9));
+	parent2.addConnection(connectionGene(1, 6, 1.0f, true, 10));
+
+	cout << genome::compatibilityDistance(parent1, parent2, 1.0f, 1.0f, 1.0f) << endl;
 
 	// Child
-	genome *child = genome::crossover(*parent2, *parent1);
+	genome child = genome::crossover(parent2, parent1);
 	SDL_Init(SDL_INIT_EVERYTHING);
 	SDL_Window* window = SDL_CreateWindow("Genome Representation", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, screenSize, screenSize, SDL_WINDOW_SHOWN);
 	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, 0);
@@ -195,7 +210,7 @@ int main() {
 	// Stuff for writing a message
 	TTF_Init();
 
-	drawNodes(child, renderer, screenSize);
+	drawNodes(parent1, renderer, screenSize);
 	
 
 	while (true)

@@ -136,14 +136,21 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="connectionGene.h" />
+    <ClInclude Include="Evaluator.h" />
     <ClInclude Include="genome.h" />
+    <ClInclude Include="neuralNetwork.h" />
+    <ClInclude Include="neuron.h" />
     <ClInclude Include="nodeGene.h" />
     <ClInclude Include="olcConsoleGameEngine.h" />
+    <ClInclude Include="species.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Evaluator.cpp" />
     <ClCompile Include="game.cpp" />
     <ClCompile Include="genome.cpp" />
     <ClCompile Include="genomeRepresentation.cpp" />
+    <ClCompile Include="neuralNetwork.cpp" />
+    <ClCompile Include="neuron.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

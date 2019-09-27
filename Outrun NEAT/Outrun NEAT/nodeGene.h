@@ -1,7 +1,7 @@
 #pragma once
 
 
-static int idGlobal = 0;
+static int idNodeGlobal = 0;
 
 enum TYPE {
 	INPUT,
@@ -17,7 +17,7 @@ private:
 
 public:
 	nodeGene(TYPE type, int id) { this->type = type; this->id = id; }
-	nodeGene(TYPE type) { this->type = type; this->id = idGlobal++; }
+	nodeGene(TYPE type) { this->type = type; this->id = idNodeGlobal++; }
 	TYPE getTYPE() { return type; }
 	int getId() { return id; }
 };
