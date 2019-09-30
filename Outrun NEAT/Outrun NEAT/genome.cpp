@@ -54,43 +54,60 @@ float genome::getWeightByIndex(int innovation)
 }
 
 void genome::addConnectionMutation() {
-	// First Select 2 random nodes from our list
-	nodeGene node1 = nodes[rand() % nodes.size()];
-	nodeGene node2 = nodes[rand() % nodes.size()];
-	float weight = -1.0f + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (2.0f)));
+	// High chance at the beginning that the connection won't be valid
+	int attempts = 0;
+	while (attempts < 100) {
+		// First Select 2 random nodes from our list
+		nodeGene node1 = nodes[rand() % nodes.size()];
+		nodeGene node2 = nodes[rand() % nodes.size()];
+		float weight = -1.0f + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (2.0f)));
 
-	// Check if the node connects to itself
-	while (node1.getId() == node2.getId()) {
-		node2 = nodes[rand() % (nodes.size() - 1)];
-	}
+		// Check if the node connects to itself
+		while (node1.getId() == node2.getId()) {
+			node2 = nodes[rand() % (nodes.size() - 1)];
+		}
 
-	// See if the positions need to be reversed
-	bool reversed = false;
+		// See if the positions need to be reversed
+		bool reversed = false;
 
-	if (node1.getTYPE() == TYPE::HIDDEN && node2.getTYPE() == TYPE::INPUT)
-		reversed = true;
-	else if (node1.getTYPE() == TYPE::OUTPUT && node2.getTYPE() == TYPE::HIDDEN)
-		reversed = true;
-	else if (node1.getTYPE() == TYPE::OUTPUT && node2.getTYPE() == TYPE::INPUT)
-		reversed = true;
+		if (node1.getTYPE() == TYPE::HIDDEN && node2.getTYPE() == TYPE::INPUTER)
+			reversed = true;
+		else if (node1.getTYPE() == TYPE::OUTPUT && node2.getTYPE() == TYPE::HIDDEN)
+			reversed = true;
+		else if (node1.getTYPE() == TYPE::OUTPUT && node2.getTYPE() == TYPE::INPUTER)
+			reversed = true;
 
-	// Check if they are both output or both Input
-	if (node1.getTYPE() == TYPE::INPUT && node2.getTYPE() == TYPE::INPUT)
+		// Check if they are both output or both Input
+		if (node1.getTYPE() == TYPE::INPUTER && node2.getTYPE() == TYPE::INPUTER) {
+			attempts++;
+			continue;
+		}
+		if (node1.getTYPE() == TYPE::OUTPUT && node2.getTYPE() == TYPE::OUTPUT) {
+			attempts++;
+			continue;
+		}
+			
+
+
+		// Check if a connection exists already
+		for (connectionGene con : connections) {
+			if (con.getInNode() == node1.getId() && con.getOutNode() == node2.getId()) {
+				attempts++;
+				continue;
+			}
+			// Maybe other way around
+			else if (con.getInNode() == node2.getId() && con.getOutNode() == node1.getId()) {
+				attempts++;
+				continue;
+			}
+		}
+
+		// Create connection
+		connectionGene cg = connectionGene(reversed ? node2.getId() : node1.getId(), reversed ? node1.getId() : node2.getId(), weight, true);
+		connections.push_back(cg);
 		return;
-	if (node1.getTYPE() == TYPE::OUTPUT && node2.getTYPE() == TYPE::OUTPUT)
-		return;
-
-
-	// Check if a connection exists already
-	for (connectionGene con : connections) {
-		if (con.getInNode() == node1.getId() && con.getOutNode() == node2.getId()) return;
-		// Maybe other way around
-		else if (con.getInNode() == node2.getId() && con.getOutNode() == node1.getId())  return;
 	}
-
-	// Create connection
-	connectionGene cg = connectionGene(reversed ? node2.getId() : node1.getId(), reversed ? node1.getId() : node2.getId(), weight, true);
-	connections.push_back(cg);
+	
 
 }
 
@@ -98,7 +115,7 @@ void genome::addNode() {
 	if (nodes.empty())
 		return;
 
-	int id = rand() % nodes.size();
+	int id = rand() % connections.size();
 	connectionGene con = connections[id];
 	
 	// Disable the connection

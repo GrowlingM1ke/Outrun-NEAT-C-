@@ -1,10 +1,10 @@
 #pragma once
 
 
-static int idNodeGlobal = 0;
+static int idNodeGlobal = 1;
 
 enum TYPE {
-	INPUT,
+	INPUTER,
 	HIDDEN,
 	OUTPUT
 };

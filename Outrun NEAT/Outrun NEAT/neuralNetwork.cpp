@@ -1,11 +1,15 @@
 #include "neuralNetwork.h"
+#include <stdexcept>
+#include <iostream>
+
+using namespace std;
 
 neuralNetwork::neuralNetwork(genome gen)
 {
 	for (nodeGene node : gen.getNodes()) {
 		neuron neu = neuron();
 
-		if (node.getTYPE() == TYPE::INPUT) {
+		if (node.getTYPE() == TYPE::INPUTER) {
 			neu.increaseInputConnectionSize();
 			input.push_back(node.getId());
 		}
@@ -27,7 +31,7 @@ neuralNetwork::neuralNetwork(genome gen)
 vector<float> neuralNetwork::calculate(vector<float> inputParameters)
 {
 	if (inputParameters.size() != input.size()) {
-		throw exception("Number of inputs must match number of input neurons in genome");
+		throw invalid_argument("Error: number of inputs is not equal to expected number of inputs!");
 	}
 
 	// Iterate through the neurons map and reset them
@@ -49,7 +53,7 @@ vector<float> neuralNetwork::calculate(vector<float> inputParameters)
 		inputNeuron.calculate();
 
 		// loop through receivers of this input
-		for (int k = 0; k < inputNeuron.getNoOfInputs(); k++) {
+		for (int k = 0; k < inputNeuron.getOutputIds().size(); k++) {
 			neuron &receiver = neurons[inputNeuron.getOutputIds()[k]];
 			// add the input directly to the next neuron, using the correct weight for the connection
 			receiver.feedInput(inputNeuron.getOutput() * inputNeuron.getOutputWeights()[k]);
@@ -61,6 +65,7 @@ vector<float> neuralNetwork::calculate(vector<float> inputParameters)
 	while (unprocessed.size() > 0) {
 		loops++;
 		if (loops > 10000) {
+			cout << "Can't solve network giving up." << endl;
 			throw exception("Can't solve network giving up.");
 		}
 		

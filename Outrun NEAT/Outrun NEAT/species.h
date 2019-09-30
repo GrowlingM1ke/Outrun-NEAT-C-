@@ -4,12 +4,12 @@
 class Species
 {
 public:
-	genome mascot;
-	vector<genome> members;
+	shared_ptr<genome> mascot;
+	vector<shared_ptr<genome>> members;
 	float totalAdjustedFitness = 0.0f;
 
 
-	Species(genome mascot) {
+	Species(shared_ptr<genome> mascot) {
 		this->mascot = mascot;
 		members.push_back(mascot);
 	}

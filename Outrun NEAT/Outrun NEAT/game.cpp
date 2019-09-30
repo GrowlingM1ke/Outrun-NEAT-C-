@@ -46,6 +46,11 @@ Last Updated: 10/07/2017
 #undef main
 #include <iostream>
 #include <string>
+#include "Evaluator.h"
+#include "neuralNetwork.h"
+#include <SDL_ttf.h>
+#include <sstream>
+#include <iomanip>
 // TODO have the game be controlled by the neural network and fitness function
 using namespace std;
 
@@ -63,6 +68,17 @@ public:
 
 private:
 
+	// Instatiate the evaluator and Neural Network here
+	evaluator eval = evaluator();
+	neuralNetwork nn;
+	vector<shared_ptr<genome>> currentPop;
+	shared_ptr<genome> currentGenome;
+	int genomePos = 0;
+	int popSize;
+	int currentGeneration = 0;
+	float shortTime;
+
+
 	float fDistance = 0.0f;			// Distance car has travelled around track
 	float fCurvature = 0.0f;		// Current track curvature, lerped between track sections
 	float fTrackCurvature = 0.0f;	// Accumulation of track curvature
@@ -72,21 +88,157 @@ private:
 	float fOldCarPos = 0.0f;		// Previous position of the car
 	float fPlayerCurvature = 0.0f;			// Accumulation of player curvature
 	float fSpeed = 0.0f;			// Current player speed
+	float fSavedCarPos = 0.0f;			    // if the car doesnt move from position after 2 seconds
 
 	// Create roadblock properties
-	float fRoadBlockVerticalPosition = 0.0f;
-	float fRoadBlockHorizontalPosition = 0.0f;
-	bool exists = false;
+	//float fRoadBlockVerticalPosition = 0.0f;
+	//float fRoadBlockHorizontalPosition = 0.0f;
+	//bool exists = false;
 
 	// Save the x positions to know when the car and roadblock collided
 	int nCarPos = 0;
-	int nRoadBlockPos = 0;
+	// int nRoadBlockPos = 0;
 
 	vector<pair<float, float>> vecTrack; // Track sections, sharpness of bend, length of section
 
 	list<float> listLapTimes;		// List of previous lap times
 	float fCurrentLapTime;			// Current lap time
+
+	// SDL
 	int acc = 0;
+
+	int countNodesByType(genome gen, TYPE type) {
+		int acc = 0;
+		for (nodeGene ng : gen.getNodes()) {
+			if (ng.getTYPE() == type)
+				acc++;
+		}
+		return acc;
+	}
+
+	void drawNodes(genome gen, SDL_Renderer* renderer, int screenSize) {
+		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+		SDL_RenderClear(renderer);
+		// SDL Related variables
+		int nodeSize = screenSize / 25;
+		int connectionSizeBulb = nodeSize / 2;
+		map<int, vector<int>> m;
+
+		TTF_Font* font = TTF_OpenFont("arial.ttf", 24); //this opens a font style and sets a size
+
+		SDL_Color White = { 255, 255, 255 };  // this is the color in rgb format, maxing out all would give you the color white, and it will be your text's color
+
+		SDL_Color Black = { 0, 0, 0 };
+
+		SDL_Color Red = { 255, 0, 0 };
+
+		SDL_Surface* surfaceMessage = TTF_RenderText_Solid(font, "2", White); // as TTF_RenderText_Solid could only be used on SDL_Surface then you have to create the surface first
+
+		SDL_Texture* Message = SDL_CreateTextureFromSurface(renderer, surfaceMessage); //now you can convert it into a texture
+
+		SDL_Rect Message_rect; //create a rect
+		Message_rect.x = 0;  //controls the rect's x coordinate 
+		Message_rect.y = 0; // controls the rect's y coordinte
+		Message_rect.w = nodeSize; // controls the width of the rect
+		Message_rect.h = nodeSize; // controls the height of the rect
+
+		// Draw the nodes
+		int posInput = 1;
+		int posOutput = 1;
+		for (nodeGene gene : gen.getNodes()) {
+			if (gene.getTYPE() == TYPE::INPUTER) {
+				SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
+				float x = ((float)(posInput / ((float)countNodesByType(gen, TYPE::INPUTER))) * screenSize - nodeSize);
+				float y = screenSize - nodeSize / 2;
+				SDL_Rect* rect = new SDL_Rect();
+				rect->x = x - nodeSize / 2;
+				rect->y = y - nodeSize / 2;
+				rect->w = nodeSize;
+				rect->h = nodeSize;
+				SDL_RenderFillRect(renderer, rect);
+
+				m[gene.getId()].push_back((int)x);
+				m[gene.getId()].push_back((int)y);
+				posInput++;
+			}
+			else if (gene.getTYPE() == TYPE::HIDDEN) {
+				int x = rand() % (screenSize - nodeSize * 2) + nodeSize;
+				int y = rand() % (screenSize - nodeSize * 3) + nodeSize * 1.5f;
+				SDL_Rect* rect = new SDL_Rect();
+				rect->x = x - nodeSize / 2;
+				rect->y = y - nodeSize / 2;
+				rect->w = nodeSize;
+				rect->h = nodeSize;
+				SDL_RenderFillRect(renderer, rect);
+
+				m[gene.getId()].push_back((int)x);
+				m[gene.getId()].push_back((int)y);
+			}
+			else if (gene.getTYPE() == TYPE::OUTPUT) {
+				float x = ((float)(posOutput)) / ((float)countNodesByType(gen, TYPE::OUTPUT)) * screenSize - nodeSize;
+				float y = nodeSize / 2;
+				SDL_Rect* rect = new SDL_Rect();
+				rect->x = x - nodeSize / 2;
+				rect->y = y - nodeSize / 2;
+				rect->w = nodeSize;
+				rect->h = nodeSize;
+				SDL_RenderFillRect(renderer, rect);
+
+				m[gene.getId()].push_back((int)x);
+				m[gene.getId()].push_back((int)y);
+				posOutput++;
+			}
+		}
+
+		for (connectionGene connection : gen.getConnections()) {
+			if (!connection.getExpressed()) {
+				continue;
+			}
+			vector<int> inNode = m[connection.getInNode()];
+			vector<int> outNode = m[connection.getOutNode()];
+
+			int x = (outNode.at(0) - inNode.at(0));
+			int y = (outNode.at(1) - inNode.at(1));
+			SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
+			SDL_RenderDrawLine(renderer, inNode.at(0), inNode.at(1), inNode.at(0) + x, inNode.at(1) + y);
+
+			// Indicate direction
+			SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+			SDL_Rect* rect = new SDL_Rect();
+			rect->x = inNode.at(0) + x * 0.8f - connectionSizeBulb / 2;
+			rect->y = inNode.at(1) + y * 0.8f - connectionSizeBulb / 2;
+			rect->w = connectionSizeBulb;
+			rect->h = connectionSizeBulb;
+			SDL_RenderFillRect(renderer, rect);
+
+			// Write down weight
+			std::stringstream stream;
+			stream << std::fixed << std::setprecision(2) << connection.getWeight();
+			string id = stream.str();
+			surfaceMessage = TTF_RenderText_Solid(font, id.c_str(), White);
+			Message = SDL_CreateTextureFromSurface(renderer, surfaceMessage);
+			Message_rect.x = inNode.at(0) + x * 0.5f - connectionSizeBulb / 2 * 3;
+			Message_rect.y = inNode.at(1) + y * 0.5f - connectionSizeBulb;
+			Message_rect.w = connectionSizeBulb * 3;
+			Message_rect.h = connectionSizeBulb * 2;
+			SDL_RenderCopy(renderer, Message, NULL, &Message_rect);
+		}
+
+		// Render text
+		for (auto const& x : m)
+		{
+			string id = to_string(x.first);
+			surfaceMessage = TTF_RenderText_Solid(font, id.c_str(), Black);
+			Message = SDL_CreateTextureFromSurface(renderer, surfaceMessage);
+			Message_rect.x = x.second.at(0) - nodeSize / 2;
+			Message_rect.y = x.second.at(1) - nodeSize / 2;
+			Message_rect.w = nodeSize;
+			Message_rect.h = nodeSize;
+			SDL_RenderCopy(renderer, Message, NULL, &Message_rect);
+		}
+
+		SDL_RenderPresent(renderer);
+	}
 
 	
 
@@ -103,21 +255,76 @@ private:
 		}
 	}
 
+	// Initiate phase 1 of starting a neural network
+	void newPopRun() {
+		genomePos = 0;
+		eval.evaluate1();
+		currentPop.clear();
+		currentPop = eval.getGenomes();
+		currentGenome = currentPop[genomePos];
+		nn = neuralNetwork(*currentGenome);
+		popSize = currentPop.size();
+		currentGeneration++;
+
+		// SDL STUFF
+		drawNodes(*currentGenome, getSDLRenderer(), 600);
+	}
+
+	void newRun() {
+		fDistance = 0.0f;
+		fCurvature = 0.0f;
+		fTrackCurvature = 0.0f;
+
+		fCarPos = 0.0f;
+		fOldCarPos = 0.0f;
+		fPlayerCurvature = 0.0f;
+		fSpeed = 0.0f;
+
+		// Create roadblock properties
+		//float fRoadBlockVerticalPosition = 0.0f;
+		//float fRoadBlockHorizontalPosition = 0.0f;
+		//bool exists = false;
+		genomePos++;
+		currentGenome = currentPop[genomePos];
+		nn = neuralNetwork(*currentGenome);
+
+		drawNodes(*currentGenome, getSDLRenderer(), 600);
+
+	}
+
 protected:
 	// Called by olcConsoleGameEngine
 	virtual bool OnUserCreate()
 	{
+		// Instatiate the evaluator with the correct settings
+		// Input: fplayerCurvature, fTrackCurvature, fSpeed
+		// Output: Up down left right
+		eval.initPopulation(3, 4);
+		newPopRun();
+
 		// randomly generate track
 		srand((unsigned)time(NULL));
-		int number = rand() % 3 + 4;
+		//int number = rand() % 3 + 4;
 
 
+		//vecTrack.push_back(make_pair(0.0f, 10.0f));		// Short section for start/finish line
+		//for (int i = 0; i < number; i++) {
+		//	// making it biased for the turns so the player 50% of the time receives more extreme turns
+		//	vecTrack.push_back(make_pair(generateBiasedRand(-1.0f, 1.0f, true), generateBiasedRand(100.0f, 400.0f, false)));
+		//	vecTrack.push_back(make_pair(0.0f , generateBiasedRand(100.0f, 200.0f, false)));
+		//}
+
+		// Define track
 		vecTrack.push_back(make_pair(0.0f, 10.0f));		// Short section for start/finish line
-		for (int i = 0; i < number; i++) {
-			// making it biased for the turns so the player 50% of the time receives more extreme turns
-			vecTrack.push_back(make_pair(generateBiasedRand(-1.0f, 1.0f, true), generateBiasedRand(100.0f, 400.0f, false)));
-			vecTrack.push_back(make_pair(0.0f , generateBiasedRand(100.0f, 200.0f, false)));
-		}
+		vecTrack.push_back(make_pair(0.0f, 200.0f));
+		vecTrack.push_back(make_pair(1.0f, 200.0f));
+		vecTrack.push_back(make_pair(0.0f, 150.0f));
+		vecTrack.push_back(make_pair(-1.0f, 100.0f));
+		vecTrack.push_back(make_pair(0.0f, 200.0f));
+		vecTrack.push_back(make_pair(-1.0f, 200.0f));
+		vecTrack.push_back(make_pair(1.0f, 200.0f));
+		vecTrack.push_back(make_pair(0.2f, 500.0f));
+		vecTrack.push_back(make_pair(0.0f, 200.0f));
 
 		// Calculate total track distance, so we can set lap times
 		for (auto t : vecTrack)
@@ -136,7 +343,7 @@ protected:
 	virtual bool OnUserUpdate(float fElapsedTime)
 	{
 		//SDL related stuff
-		SDL_SetRenderDrawColor(getSDLRenderer(), 0, 0, 0, 255);
+		/*SDL_SetRenderDrawColor(getSDLRenderer(), 0, 0, 0, 255);
 
 
 		SDL_RenderClear(getSDLRenderer());
@@ -146,10 +353,10 @@ protected:
 		SDL_RenderDrawLine(getSDLRenderer(), 0, 400 - acc, 600 - acc, 0);
 		acc++;
 
-		SDL_RenderPresent(getSDLRenderer());
+		SDL_RenderPresent(getSDLRenderer());*/
 
 		// Check if the roadblock exists
-		if (!exists) {
+		/*if (!exists) {
 			fRoadBlockVerticalPosition = generateBiasedRand(0.0, 0.7, false);
 			fRoadBlockHorizontalPosition = fDistance;
 			exists = true;
@@ -157,29 +364,36 @@ protected:
 		else {
 			if (fDistance - fRoadBlockHorizontalPosition >= 150.0f)
 				exists = false;
-		}
+		}*/
 		// Handle control input
 		int nCarDirection = 0;
 
-		if ((fRoadBlockHorizontalPosition + 75 <= fDistance && fRoadBlockHorizontalPosition + 110 >= fDistance) && (nCarPos + 48 >= nRoadBlockPos && nCarPos +3 <= nRoadBlockPos))
-			fSpeed -= 5.0f * fElapsedTime;
+		// Put the values into the neural network and receive outputs
+		vector<float> inputs;
+		inputs.push_back(fPlayerCurvature);
+		inputs.push_back(fTrackCurvature);
+		inputs.push_back(fSpeed);
+		vector<float> outputs = nn.calculate(inputs);
 
-		if (m_keys[VK_UP].bHeld)
+		/*if ((fRoadBlockHorizontalPosition + 75 <= fDistance && fRoadBlockHorizontalPosition + 110 >= fDistance) && (nCarPos + 48 >= nRoadBlockPos && nCarPos +3 <= nRoadBlockPos))
+			fSpeed -= 5.0f * fElapsedTime;*/
+
+		if (outputs[0] > 0)
 			fSpeed += 2.0f * fElapsedTime;
-		else if (m_keys[VK_DOWN].bHeld)
+		else if (outputs[1] > 0)
 			fSpeed -= 2.0f * fElapsedTime;
 		else
 			fSpeed -= 1.0f * fElapsedTime;
 
 		// Car Curvature is accumulated left/right input, but inversely proportional to speed
 		// i.e. it is harder to turn at high speed
-		if (m_keys[VK_LEFT].bHeld)
+		if (outputs[2] > 0)
 		{
 			fPlayerCurvature -= 0.7f * fElapsedTime * (1.0f - fSpeed / 2.0f);
 			nCarDirection = -1;
 		}
 
-		if (m_keys[VK_RIGHT].bHeld)
+		if (outputs[3] > 0)
 		{
 			fPlayerCurvature += 0.7f * fElapsedTime * (1.0f - fSpeed / 2.0f);
 			nCarDirection = +1;
@@ -203,13 +417,32 @@ protected:
 
 		// Lap Timing and counting
 		fCurrentLapTime += fElapsedTime;
-		if (fDistance >= fTrackDistance)
+
+		// Check if the car moved after 2 seconds
+		bool forceReset = false;
+		shortTime += fElapsedTime;
+		if (shortTime > 2.0f) {
+			if (fCarPos == fSavedCarPos)
+				forceReset = true;
+			shortTime = 0.0f;
+		}
+		// Finished the run reset
+		if (fDistance >= fTrackDistance || fCurrentLapTime > 40.0f || forceReset)
 		{
-			fDistance -= fTrackDistance;
+			// Save the fitness to the genome
+			currentGenome->setFitness(fDistance + (10000.0f / fCurrentLapTime));
+			// fDistance -= fTrackDistance;
 			listLapTimes.push_front(fCurrentLapTime);
 			listLapTimes.pop_back();
 			fCurrentLapTime = 0.0f;
-			exists = false;
+			if (genomePos + 1 == popSize) {
+				eval.evaluate2();
+				newPopRun();
+				return true;
+			}
+			newRun();
+			// exists = false;
+			return true;
 		}
 
 		// Find position on track (could optimise)
@@ -288,11 +521,11 @@ protected:
 					Draw(x, nRow, PIXEL_SOLID, nGrassColour);
 				if (x >= (int)(fMiddlePoint * ScreenWidth()) && x <= (int)(fMiddlePoint * ScreenWidth()) + 1)
 					Draw(x, nRow, PIXEL_SOLID, nMiddlePointColour);
-				if(x >= (int)(nLeftClip + (fRoadWidth * fRoadBlockVerticalPosition * 380)) && x <= (int)(nLeftClip + (fRoadWidth * fRoadBlockVerticalPosition * 380)) + 1 * (48 * fPerspective) )
+				/*if(x >= (int)(nLeftClip + (fRoadWidth * fRoadBlockVerticalPosition * 380)) && x <= (int)(nLeftClip + (fRoadWidth * fRoadBlockVerticalPosition * 380)) + 1 * (48 * fPerspective) )
 					if (y <= (fDistance - fRoadBlockHorizontalPosition) * 0.4 && y >= (fDistance - fRoadBlockHorizontalPosition) * 0.4 - (12 * fPerspective)) {
 						Draw(x, nRow, PIXEL_SOLID, FG_BLACK);
 						nRoadBlockPos = x;
-					}
+					}*/
 			}
 
 		// Draw Car - car position on road is proportional to difference between
@@ -340,14 +573,12 @@ protected:
 		}
 
 		// Draw Stats
-		DrawString(0, 0, L"Distance: " + to_wstring(fDistance));
-		DrawString(0, 1, L"Target Curvature: " + to_wstring(fCurvature));
-		DrawString(0, 2, L"Player Curvature: " + to_wstring(fPlayerCurvature));
-		DrawString(0, 3, L"Player Speed    : " + to_wstring(fSpeed));
-		DrawString(0, 4, L"Track Curvature : " + to_wstring(fTrackCurvature));
-		DrawString(0, 5, L"Distance Traveled : " + to_wstring(fDistance));
-		DrawString(0, 6, L"NCarPos : " + to_wstring(nCarPos));
-		DrawString(0, 7, L"nRoadBlockPos : " + to_wstring(nRoadBlockPos));
+		DrawString(0, 1, L"Player Speed    : " + to_wstring(fSpeed));
+		DrawString(0, 2, L"Distance Traveled : " + to_wstring(fDistance));
+		DrawString(0, 3, L"NCarPos : " + to_wstring(nCarPos));
+		DrawString(0, 4, L"Generation : " + to_wstring(currentGeneration));
+		DrawString(0, 5, L"Genome ID in generation: " + to_wstring(genomePos));
+		// DrawString(0, 7, L"nRoadBlockPos : " + to_wstring(nRoadBlockPos));
 
 		auto disp_time = [](float t) // Little lambda to turn floating point seconds into minutes:seconds:millis string
 		{
@@ -372,38 +603,22 @@ protected:
 	}
 };
 
-void genomeTest(SDL_Window *window, SDL_Renderer *renderer) {
+
+int main()
+{
+
+	SDL_Init(SDL_INIT_EVERYTHING);
+	SDL_Window* window = SDL_CreateWindow("Genome Representation", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 600, 600, SDL_WINDOW_SHOWN);
+	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, 0);
+	TTF_Init();
+
+
+	// Use olcConsoleGameEngine derived app
+	OneLoneCoder_FormulaOLC game;
+	game.ConstructConsole(100, 100, 8, 8);
+	game.Start(renderer);
+
 	
 
-	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-
-
-	SDL_RenderClear(renderer);
-
-	SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
-
-	SDL_RenderDrawLine(renderer, 0, 0, 600, 400);
-
-	SDL_RenderPresent(renderer);
-
-	SDL_Delay(3000);
+	return 0;
 }
-
-//int main()
-//{
-//
-//	SDL_Init(SDL_INIT_EVERYTHING);
-//	SDL_Window* window = SDL_CreateWindow("Genome Representation", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 600, 400, SDL_WINDOW_SHOWN);
-//	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, 0);
-//	
-//	genomeTest(window, renderer);
-//
-//	// Use olcConsoleGameEngine derived app
-//	OneLoneCoder_FormulaOLC game;
-//	game.ConstructConsole(80, 100, 6, 6);
-//	game.Start(renderer);
-//
-//	
-//
-//	return 0;
-//}

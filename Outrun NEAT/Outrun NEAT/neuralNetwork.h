@@ -15,6 +15,7 @@ private:
 
 public:
 	neuralNetwork(genome gen);
+	neuralNetwork() {};
 	vector<float> calculate(vector<float> inputParameters);
 };
 

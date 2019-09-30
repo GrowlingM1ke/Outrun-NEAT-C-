@@ -1,20 +1,25 @@
 #include "Evaluator.h"
 #include <exception>
-#define MUTATION_RATE 0.5f
-#define ADD_CONNECTION_RATE 0.5f
-#define ADD_NODE_RATE 0.5f
+#define MUTATION_CHANCE 0.5f
+#define ADD_CONNECTION_CHANCE 0.05f
+#define ADD_NODE_CHANCE 0.03f
+#define CROSSOVER_CHANCE 0.75f
+#define C1 1.0f
+#define C2 1.0f
+#define C3 0.4f
+#define THRESHOLD 3.0f
 
-Species evaluator::getRandomSpeciesBiasedAdjustedFitness()
+shared_ptr<Species> evaluator::getRandomSpeciesBiasedAdjustedFitness()
 {
 	float completeWeight = 0.0f;
-	for (Species &s : species) {
-		completeWeight += s.totalAdjustedFitness;
+	for (shared_ptr<Species> s : species) {
+		completeWeight += s->totalAdjustedFitness;
 	}
 
 	float r = static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (completeWeight)));
 	float countWeight = 0.0f;
-	for (Species &s : species) {
-		countWeight += s.totalAdjustedFitness;
+	for (shared_ptr<Species> s : species) {
+		countWeight += s->totalAdjustedFitness;
 		if (countWeight >= r) {
 			return s;
 		}
@@ -31,17 +36,17 @@ void evaluator::removeWeakSpecies() {
 }
 
 
-genome evaluator::getRandomGenomeBiasedAdjustedFitness(Species s)
+shared_ptr<genome> evaluator::getRandomGenomeBiasedAdjustedFitness(shared_ptr<Species> s)
 {
 	float completeWeight = 0.0f;
-	for (genome g : s.members) {
-		completeWeight += g.getFitness();
+	for (auto g : s->members) {
+		completeWeight += g->getFitness();
 	}
 
 	float r = static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (completeWeight)));
 	float countWeight = 0.0f;
-	for (genome g : s.members) {
-		countWeight += g.getFitness();
+	for (auto g : s->members) {
+		countWeight += g->getFitness();
 		if (countWeight >= r) {
 			return g;
 		}
@@ -50,10 +55,10 @@ genome evaluator::getRandomGenomeBiasedAdjustedFitness(Species s)
 	throw exception("Couldn't find a genome.");
 }
 
-void evaluator::evaluate()
+void evaluator::evaluate1()
 {
 	// Reset everything for the next generation
-	for (Species &s : species) {
+	for (auto s : species) {
 		s.reset();
 	}
 	scoreAdjustedMap.clear();
@@ -61,12 +66,12 @@ void evaluator::evaluate()
 	nextGenerationGenome.clear();
 
 	// Insert genomes into species
-	for (genome gen : genomes) {
+	for (auto gen : genomes) {
 		bool foundSpecies = false;
 		// Pass the species by reference so the totaladjustedfitness isnt lost
-		for (Species &s : species) {
-			if (gen.compatibilityDistance(gen, s.mascot, c1, c2, c3) < threshold) {
-				s.members.push_back(gen);
+		for (auto s : species) {
+			if (gen->compatibilityDistance(*gen, *s->mascot, C1, C2, C3) < THRESHOLD) {
+				s->members.push_back(gen);
 				speciesMap.insert(make_pair(gen, s));
 				foundSpecies = true;
 				break;
@@ -74,25 +79,23 @@ void evaluator::evaluate()
 		}
 
 		if (!foundSpecies) {
-			Species newSpecies = Species(gen);
+			shared_ptr<Species> newSpecies = make_shared<Species>(gen);
 			species.push_back(newSpecies);
-			// Push a reference
-			Species &speciesReference = species[species.size() - 1];
-			speciesMap.insert(make_pair(gen, speciesReference));
+			speciesMap.insert(make_pair(gen, newSpecies));
 		}
 	}
 
 	// Remove empty species
 	auto it = species.begin();
 	while (it != species.end()) {
-		if (it->members.size() == 0)
+		if ((**it).members.size() == 0)
 			it = species.erase(it);
 		else
 			++it;
 	}
 
 	// Evaluate genomes and assign fitness
-	for (genome &gen : genomes) {
+	for (auto gen : genomes) {
 		// WATCH OUT BECAUSE YOU ARE ADDING DATA TO THE WRONG VECTOR
 		//float score = evaluateGenome(gen);
 		//float adjustedScore = score / speciesMap[gen].members.size();
@@ -103,14 +106,16 @@ void evaluator::evaluate()
 		//scoreAdjustedMap.insert(make_pair(gen, adjustedScore));
 	}
 
-	removeWeakSpecies();
+	// removeWeakSpecies();
+}
 
+void evaluator::evaluate2() {
 	// Put best genome from each species into next generation
-	for (Species s : species) {
+	for (auto s : species) {
 		float bestFitness = 0.0f;
-		genome bestGenome;
-		for (genome g : s.members) {
-			if (g.getFitness() > bestFitness) {
+		shared_ptr<genome> bestGenome;
+		for (auto g : s->members) {
+			if (g->getFitness() > bestFitness) {
 				bestGenome = g;
 			}
 		}
@@ -120,22 +125,49 @@ void evaluator::evaluate()
 
 	// Breed new children for the population
 	while (nextGenerationGenome.size() < populationSize) {
-		Species s = getRandomSpeciesBiasedAdjustedFitness();
 
-		genome p1 = getRandomGenomeBiasedAdjustedFitness(s);
-		genome p2 = getRandomGenomeBiasedAdjustedFitness(s);
+		shared_ptr<Species> s = getRandomSpeciesBiasedAdjustedFitness();
+		shared_ptr<genome> child;
 
-		genome child;
+		if ((static_cast <float> (rand()) / static_cast <float> (RAND_MAX)) < CROSSOVER_CHANCE) {
+			shared_ptr<genome> p1 = getRandomGenomeBiasedAdjustedFitness(s);
+			shared_ptr<genome> p2 = getRandomGenomeBiasedAdjustedFitness(s);
 
-		child = genome::crossover(p1, p2);
+			child = make_shared<genome>(genome::crossover(*p1, *p2));
+		}
+		else {
+			child = getRandomGenomeBiasedAdjustedFitness(s);
+		}
 
-		if ((static_cast <float> (rand()) / static_cast <float> (RAND_MAX)) < MUTATION_RATE)
-			child.mutation();
-		if ((static_cast <float> (rand()) / static_cast <float> (RAND_MAX)) < ADD_CONNECTION_RATE)
-			child.addConnectionMutation();
-		if ((static_cast <float> (rand()) / static_cast <float> (RAND_MAX)) < ADD_NODE_RATE)
-			child.addNode();
+
+		if ((static_cast <float> (rand()) / static_cast <float> (RAND_MAX)) < MUTATION_CHANCE)
+			child->mutation();
+		if ((static_cast <float> (rand()) / static_cast <float> (RAND_MAX)) < ADD_CONNECTION_CHANCE)
+			child->addConnectionMutation();
+		if ((static_cast <float> (rand()) / static_cast <float> (RAND_MAX)) < ADD_NODE_CHANCE)
+			child->addNode();
 
 		nextGenerationGenome.push_back(child);
+	}
+}
+
+void evaluator::initPopulation(int inputs, int outputs) {
+
+	while (genomes.size() < 5) {
+	shared_ptr<genome> firstMembers = make_shared<genome>();
+	for (int i = 0; i < inputs; i++) {
+		nodeGene node = nodeGene(TYPE::INPUTER);
+		firstMembers->addNode(node);
+	}
+
+	for (int i = 0; i < outputs; i++) {
+		nodeGene node = nodeGene(TYPE::OUTPUT);
+		firstMembers->addNode(node);
+	}
+		
+	firstMembers->addConnectionMutation();
+	firstMembers->addNode();
+	firstMembers->mutation();
+	genomes.push_back(firstMembers);
 	}
 }

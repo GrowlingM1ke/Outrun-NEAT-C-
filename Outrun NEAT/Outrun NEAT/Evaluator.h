@@ -7,24 +7,23 @@
 class evaluator
 {
 private:
-	int populationSize;
-	float c1 = 0.0f;
-	float c2 = 0.0f;
-	float c3 = 0.0f;
-	float threshold = 0.0f;
+	int populationSize = 100;
 
-	vector<genome> genomes;
-	map<genome, float> scoreAdjustedMap;
-	map<genome, Species> speciesMap;
-	vector<Species> species;
-	vector<genome> nextGenerationGenome;
+	vector<shared_ptr<genome>> genomes;
+	map<shared_ptr<genome>, float> scoreAdjustedMap;
+	map<shared_ptr<genome>, shared_ptr<Species>> speciesMap;
+	vector<shared_ptr<Species>> species;
+	vector<shared_ptr<genome>> nextGenerationGenome;
 
-	Species getRandomSpeciesBiasedAdjustedFitness();
-	genome getRandomGenomeBiasedAdjustedFitness(Species s);
+	shared_ptr<Species> getRandomSpeciesBiasedAdjustedFitness();
+	shared_ptr<genome> getRandomGenomeBiasedAdjustedFitness(shared_ptr<Species> s);
 	
 	void removeWeakSpecies();
 
 public:
-	void evaluate();
+	void evaluate1();
+	void evaluate2();
+	vector<shared_ptr<genome>> getGenomes() { return genomes; }
+	void initPopulation(int inputs, int outputs);
 	// virtual void evaluateGenome(genome gen) = 0;
 };
