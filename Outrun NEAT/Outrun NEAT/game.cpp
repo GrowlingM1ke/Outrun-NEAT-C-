@@ -51,6 +51,7 @@ Last Updated: 10/07/2017
 #include <SDL_ttf.h>
 #include <sstream>
 #include <iomanip>
+
 // TODO have the game be controlled by the neural network and fitness function
 using namespace std;
 
@@ -75,7 +76,6 @@ private:
 	shared_ptr<genome> currentGenome;
 	int genomePos = 0;
 	int popSize;
-	int currentGeneration = 0;
 	float shortTime;
 
 
@@ -88,7 +88,7 @@ private:
 	float fOldCarPos = 0.0f;		// Previous position of the car
 	float fPlayerCurvature = 0.0f;			// Accumulation of player curvature
 	float fSpeed = 0.0f;			// Current player speed
-	float fSavedCarPos = 0.0f;			    // if the car doesnt move from position after 2 seconds
+	float fSavedDistance = 0.0f;			    // if the car doesnt move from position after 2 seconds
 
 	// Create roadblock properties
 	//float fRoadBlockVerticalPosition = 0.0f;
@@ -106,7 +106,16 @@ private:
 
 	// SDL
 	int acc = 0;
+	TTF_Font* font = TTF_OpenFont("arial.ttf", 24); //this opens a font style and sets a size
+	SDL_Color White = { 255, 255, 255 };  // this is the color in rgb format, maxing out all would give you the color white, and it will be your text's color
 
+	SDL_Color Black = { 0, 0, 0 };
+
+	SDL_Color Red = { 255, 0, 0 };
+
+	SDL_Surface surfaceMessage = *TTF_RenderText_Solid(font, "2", White); // as TTF_RenderText_Solid could only be used on SDL_Surface then you have to create the surface first
+
+	
 	int countNodesByType(genome gen, TYPE type) {
 		int acc = 0;
 		for (nodeGene ng : gen.getNodes()) {
@@ -124,17 +133,9 @@ private:
 		int connectionSizeBulb = nodeSize / 2;
 		map<int, vector<int>> m;
 
-		TTF_Font* font = TTF_OpenFont("arial.ttf", 24); //this opens a font style and sets a size
+		SDL_Texture *Message = SDL_CreateTextureFromSurface(renderer, &surfaceMessage); //now you can convert it into a texture
 
-		SDL_Color White = { 255, 255, 255 };  // this is the color in rgb format, maxing out all would give you the color white, and it will be your text's color
-
-		SDL_Color Black = { 0, 0, 0 };
-
-		SDL_Color Red = { 255, 0, 0 };
-
-		SDL_Surface* surfaceMessage = TTF_RenderText_Solid(font, "2", White); // as TTF_RenderText_Solid could only be used on SDL_Surface then you have to create the surface first
-
-		SDL_Texture* Message = SDL_CreateTextureFromSurface(renderer, surfaceMessage); //now you can convert it into a texture
+		SDL_Rect rect = SDL_Rect();
 
 		SDL_Rect Message_rect; //create a rect
 		Message_rect.x = 0;  //controls the rect's x coordinate 
@@ -150,12 +151,12 @@ private:
 				SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
 				float x = ((float)(posInput / ((float)countNodesByType(gen, TYPE::INPUTER))) * screenSize - nodeSize);
 				float y = screenSize - nodeSize / 2;
-				SDL_Rect* rect = new SDL_Rect();
-				rect->x = x - nodeSize / 2;
-				rect->y = y - nodeSize / 2;
-				rect->w = nodeSize;
-				rect->h = nodeSize;
-				SDL_RenderFillRect(renderer, rect);
+				SDL_Rect rect = SDL_Rect();
+				rect.x = x - nodeSize / 2;
+				rect.y = y - nodeSize / 2;
+				rect.w = nodeSize;
+				rect.h = nodeSize;
+				SDL_RenderFillRect(renderer, &rect);
 
 				m[gene.getId()].push_back((int)x);
 				m[gene.getId()].push_back((int)y);
@@ -164,12 +165,11 @@ private:
 			else if (gene.getTYPE() == TYPE::HIDDEN) {
 				int x = rand() % (screenSize - nodeSize * 2) + nodeSize;
 				int y = rand() % (screenSize - nodeSize * 3) + nodeSize * 1.5f;
-				SDL_Rect* rect = new SDL_Rect();
-				rect->x = x - nodeSize / 2;
-				rect->y = y - nodeSize / 2;
-				rect->w = nodeSize;
-				rect->h = nodeSize;
-				SDL_RenderFillRect(renderer, rect);
+				rect.x = x - nodeSize / 2;
+				rect.y = y - nodeSize / 2;
+				rect.w = nodeSize;
+				rect.h = nodeSize;
+				SDL_RenderFillRect(renderer, &rect);
 
 				m[gene.getId()].push_back((int)x);
 				m[gene.getId()].push_back((int)y);
@@ -177,12 +177,11 @@ private:
 			else if (gene.getTYPE() == TYPE::OUTPUT) {
 				float x = ((float)(posOutput)) / ((float)countNodesByType(gen, TYPE::OUTPUT)) * screenSize - nodeSize;
 				float y = nodeSize / 2;
-				SDL_Rect* rect = new SDL_Rect();
-				rect->x = x - nodeSize / 2;
-				rect->y = y - nodeSize / 2;
-				rect->w = nodeSize;
-				rect->h = nodeSize;
-				SDL_RenderFillRect(renderer, rect);
+				rect.x = x - nodeSize / 2;
+				rect.y = y - nodeSize / 2;
+				rect.w = nodeSize;
+				rect.h = nodeSize;
+				SDL_RenderFillRect(renderer, &rect);
 
 				m[gene.getId()].push_back((int)x);
 				m[gene.getId()].push_back((int)y);
@@ -204,19 +203,18 @@ private:
 
 			// Indicate direction
 			SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-			SDL_Rect* rect = new SDL_Rect();
-			rect->x = inNode.at(0) + x * 0.8f - connectionSizeBulb / 2;
-			rect->y = inNode.at(1) + y * 0.8f - connectionSizeBulb / 2;
-			rect->w = connectionSizeBulb;
-			rect->h = connectionSizeBulb;
-			SDL_RenderFillRect(renderer, rect);
+			rect.x = x - nodeSize / 2;
+			rect.y = y - nodeSize / 2;
+			rect.w = nodeSize;
+			rect.h = nodeSize;
+			SDL_RenderFillRect(renderer, &rect);
 
 			// Write down weight
 			std::stringstream stream;
 			stream << std::fixed << std::setprecision(2) << connection.getWeight();
 			string id = stream.str();
-			surfaceMessage = TTF_RenderText_Solid(font, id.c_str(), White);
-			Message = SDL_CreateTextureFromSurface(renderer, surfaceMessage);
+			surfaceMessage = *TTF_RenderText_Solid(font, id.c_str(), White);
+			Message = SDL_CreateTextureFromSurface(renderer, &surfaceMessage);
 			Message_rect.x = inNode.at(0) + x * 0.5f - connectionSizeBulb / 2 * 3;
 			Message_rect.y = inNode.at(1) + y * 0.5f - connectionSizeBulb;
 			Message_rect.w = connectionSizeBulb * 3;
@@ -228,8 +226,8 @@ private:
 		for (auto const& x : m)
 		{
 			string id = to_string(x.first);
-			surfaceMessage = TTF_RenderText_Solid(font, id.c_str(), Black);
-			Message = SDL_CreateTextureFromSurface(renderer, surfaceMessage);
+			surfaceMessage = *TTF_RenderText_Solid(font, id.c_str(), Black);
+			Message = SDL_CreateTextureFromSurface(renderer, &surfaceMessage);
 			Message_rect.x = x.second.at(0) - nodeSize / 2;
 			Message_rect.y = x.second.at(1) - nodeSize / 2;
 			Message_rect.w = nodeSize;
@@ -238,6 +236,7 @@ private:
 		}
 
 		SDL_RenderPresent(renderer);
+		SDL_DestroyTexture(Message);
 	}
 
 	
@@ -264,7 +263,21 @@ private:
 		currentGenome = currentPop[genomePos];
 		nn = neuralNetwork(*currentGenome);
 		popSize = currentPop.size();
-		currentGeneration++;
+
+		// randomly generate track		
+		int number = rand() % 3 + 4;
+
+		vecTrack.clear();
+		vecTrack.push_back(make_pair(0.0f, 10.0f));		// Short section for start/finish line
+		for (int i = 0; i < number; i++) {
+			// making it biased for the turns so the player 50% of the time receives more extreme turns
+			vecTrack.push_back(make_pair(generateBiasedRand(-1.0f, 1.0f, true), generateBiasedRand(100.0f, 400.0f, false)));
+			vecTrack.push_back(make_pair(0.0f, generateBiasedRand(100.0f, 200.0f, false)));
+		}
+
+		// Calculate total track distance, so we can set lap times
+		for (auto t : vecTrack)
+			fTrackDistance += t.second;
 
 		// SDL STUFF
 		drawNodes(*currentGenome, getSDLRenderer(), 600);
@@ -297,38 +310,11 @@ protected:
 	virtual bool OnUserCreate()
 	{
 		// Instatiate the evaluator with the correct settings
-		// Input: fplayerCurvature, fTrackCurvature, fSpeed
+		// Input: nPlayerPos, fCurvature, fSpeed
 		// Output: Up down left right
-		eval.initPopulation(3, 4);
-		newPopRun();
-
-		// randomly generate track
 		srand((unsigned)time(NULL));
-		//int number = rand() % 3 + 4;
-
-
-		//vecTrack.push_back(make_pair(0.0f, 10.0f));		// Short section for start/finish line
-		//for (int i = 0; i < number; i++) {
-		//	// making it biased for the turns so the player 50% of the time receives more extreme turns
-		//	vecTrack.push_back(make_pair(generateBiasedRand(-1.0f, 1.0f, true), generateBiasedRand(100.0f, 400.0f, false)));
-		//	vecTrack.push_back(make_pair(0.0f , generateBiasedRand(100.0f, 200.0f, false)));
-		//}
-
-		// Define track
-		vecTrack.push_back(make_pair(0.0f, 10.0f));		// Short section for start/finish line
-		vecTrack.push_back(make_pair(0.0f, 200.0f));
-		vecTrack.push_back(make_pair(1.0f, 200.0f));
-		vecTrack.push_back(make_pair(0.0f, 150.0f));
-		vecTrack.push_back(make_pair(-1.0f, 100.0f));
-		vecTrack.push_back(make_pair(0.0f, 200.0f));
-		vecTrack.push_back(make_pair(-1.0f, 200.0f));
-		vecTrack.push_back(make_pair(1.0f, 200.0f));
-		vecTrack.push_back(make_pair(0.2f, 500.0f));
-		vecTrack.push_back(make_pair(0.0f, 200.0f));
-
-		// Calculate total track distance, so we can set lap times
-		for (auto t : vecTrack)
-			fTrackDistance += t.second;
+		eval.initPopulation(3, 4, true);
+		newPopRun();
 
 		listLapTimes = { 0,0,0,0,0 };
 		fCurrentLapTime = 0.0f;
@@ -355,6 +341,7 @@ protected:
 
 		SDL_RenderPresent(getSDLRenderer());*/
 
+
 		// Check if the roadblock exists
 		/*if (!exists) {
 			fRoadBlockVerticalPosition = generateBiasedRand(0.0, 0.7, false);
@@ -365,35 +352,37 @@ protected:
 			if (fDistance - fRoadBlockHorizontalPosition >= 150.0f)
 				exists = false;
 		}*/
+
+
 		// Handle control input
 		int nCarDirection = 0;
 
 		// Put the values into the neural network and receive outputs
 		vector<float> inputs;
-		inputs.push_back(fPlayerCurvature);
-		inputs.push_back(fTrackCurvature);
+		inputs.push_back((float) nCarPos);
+		inputs.push_back(fCurvature);
 		inputs.push_back(fSpeed);
 		vector<float> outputs = nn.calculate(inputs);
 
 		/*if ((fRoadBlockHorizontalPosition + 75 <= fDistance && fRoadBlockHorizontalPosition + 110 >= fDistance) && (nCarPos + 48 >= nRoadBlockPos && nCarPos +3 <= nRoadBlockPos))
 			fSpeed -= 5.0f * fElapsedTime;*/
 
-		if (outputs[0] > 0)
+		if (outputs[0] >= 0)
 			fSpeed += 2.0f * fElapsedTime;
-		else if (outputs[1] > 0)
+		else if (outputs[1] >= 0)
 			fSpeed -= 2.0f * fElapsedTime;
 		else
 			fSpeed -= 1.0f * fElapsedTime;
 
 		// Car Curvature is accumulated left/right input, but inversely proportional to speed
 		// i.e. it is harder to turn at high speed
-		if (outputs[2] > 0)
+		if (outputs[2] >= 0)
 		{
 			fPlayerCurvature -= 0.7f * fElapsedTime * (1.0f - fSpeed / 2.0f);
 			nCarDirection = -1;
 		}
 
-		if (outputs[3] > 0)
+		if (outputs[3] >= 0)
 		{
 			fPlayerCurvature += 0.7f * fElapsedTime * (1.0f - fSpeed / 2.0f);
 			nCarDirection = +1;
@@ -422,12 +411,15 @@ protected:
 		bool forceReset = false;
 		shortTime += fElapsedTime;
 		if (shortTime > 2.0f) {
-			if (fCarPos == fSavedCarPos)
+			if (fDistance == fSavedDistance) {
 				forceReset = true;
+				fCurrentLapTime = 60.0f;
+			}
+			fSavedDistance = fDistance;
 			shortTime = 0.0f;
 		}
 		// Finished the run reset
-		if (fDistance >= fTrackDistance || fCurrentLapTime > 40.0f || forceReset)
+		if (fDistance >= fTrackDistance || fCurrentLapTime > 60.0f || forceReset)
 		{
 			// Save the fitness to the genome
 			currentGenome->setFitness(fDistance + (10000.0f / fCurrentLapTime));
@@ -576,8 +568,9 @@ protected:
 		DrawString(0, 1, L"Player Speed    : " + to_wstring(fSpeed));
 		DrawString(0, 2, L"Distance Traveled : " + to_wstring(fDistance));
 		DrawString(0, 3, L"NCarPos : " + to_wstring(nCarPos));
-		DrawString(0, 4, L"Generation : " + to_wstring(currentGeneration));
-		DrawString(0, 5, L"Genome ID in generation: " + to_wstring(genomePos));
+		DrawString(0, 4, L"fCurvature : " + to_wstring(fCurvature));
+		DrawString(0, 5, L"Generation : " + to_wstring(eval.getCurrentGeneration()));
+		DrawString(0, 6, L"Genome ID in generation: " + to_wstring(genomePos));
 		// DrawString(0, 7, L"nRoadBlockPos : " + to_wstring(nRoadBlockPos));
 
 		auto disp_time = [](float t) // Little lambda to turn floating point seconds into minutes:seconds:millis string
@@ -603,6 +596,23 @@ protected:
 	}
 };
 
+void SDLLoop() {
+	while (true) {
+		SDL_Event e;
+		while (SDL_PollEvent(&e)) {
+			if (e.type == SDL_QUIT) {
+				// Break out of the loop on quit
+				// TTF_Quit();
+				//TTF_CloseFont(font);
+				//SDL_DestroyTexture(Message);
+				//SDL_FreeSurface(surfaceMessage);
+				//break;
+			}
+		}
+	}
+	
+
+}
 
 int main()
 {
@@ -611,12 +621,13 @@ int main()
 	SDL_Window* window = SDL_CreateWindow("Genome Representation", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 600, 600, SDL_WINDOW_SHOWN);
 	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, 0);
 	TTF_Init();
-
-
+	
+	thread t1(SDLLoop);
 	// Use olcConsoleGameEngine derived app
 	OneLoneCoder_FormulaOLC game;
-	game.ConstructConsole(100, 100, 8, 8);
+	game.ConstructConsole(100, 100, 6, 6);
 	game.Start(renderer);
+	
 
 	
 

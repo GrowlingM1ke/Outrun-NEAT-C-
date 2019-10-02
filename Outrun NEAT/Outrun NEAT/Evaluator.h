@@ -7,8 +7,8 @@
 class evaluator
 {
 private:
-	int populationSize = 100;
 
+	int currentGeneration = 1;
 	vector<shared_ptr<genome>> genomes;
 	map<shared_ptr<genome>, float> scoreAdjustedMap;
 	map<shared_ptr<genome>, shared_ptr<Species>> speciesMap;
@@ -24,6 +24,6 @@ public:
 	void evaluate1();
 	void evaluate2();
 	vector<shared_ptr<genome>> getGenomes() { return genomes; }
-	void initPopulation(int inputs, int outputs);
-	// virtual void evaluateGenome(genome gen) = 0;
+	void initPopulation(int inputs, int outputs, bool load);
+	int getCurrentGeneration() { return currentGeneration; }
 };

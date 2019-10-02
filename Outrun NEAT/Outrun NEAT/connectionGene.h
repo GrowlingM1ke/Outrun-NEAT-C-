@@ -39,4 +39,5 @@ public:
 	void setExpressed(bool expressed) { this->expressed = expressed; }
 	connectionGene connectionCopy() { return connectionGene(inNode, outNode, weight, expressed, innovation); }
 	void setWeight(float weight) { this->weight = weight; }
+	void setInnovationGlobal(int value) { innovationGlobal = value; }
 };

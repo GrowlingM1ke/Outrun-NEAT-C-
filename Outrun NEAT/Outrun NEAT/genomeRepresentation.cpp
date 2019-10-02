@@ -9,6 +9,7 @@
 //#include <iomanip>
 //#include <iostream>
 //#include "genomeRepresentation.h"
+//#include "genomeSaveLoad.h"
 //
 //using namespace std;
 //
@@ -176,6 +177,8 @@
 //	vector<float> outputs = neuralN.calculate(inputs);
 //	for (auto output : outputs)
 //		cout << output << endl;
+//
+//
 //	// Parent 2
 //
 //	genome parent2 = genome();
@@ -199,6 +202,17 @@
 //
 //	// cout << genome::compatibilityDistance(parent1, parent2, 1.0f, 1.0f, 1.0f) << endl;
 //
+//	// Saving genome stuff
+//	shared_ptr<genome> p1 = make_shared<genome>(parent1);
+//	shared_ptr<genome> p2 = make_shared<genome>(parent2);
+//	vector< shared_ptr<genome>> genomes, genomes2;
+//	genomes.push_back(p1);
+//	genomes.push_back(p2);
+//
+//	genomesSaveLoad::saveGenomes(genomes, 0);
+//
+//	genomes = genomesSaveLoad::loadGenomes();
+//
 //	// Child
 //	genome child = genome::crossover(parent2, parent1);
 //	SDL_Init(SDL_INIT_EVERYTHING);
@@ -216,7 +230,7 @@
 //	// Stuff for writing a message
 //	TTF_Init();
 //
-//	drawNodes(parent1, renderer, screenSize);
+//	drawNodes(*p2, renderer, screenSize);
 //	
 //
 //	while (true)

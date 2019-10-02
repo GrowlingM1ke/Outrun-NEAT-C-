@@ -24,6 +24,7 @@ public:
 	}
 
 	genome();
+	genome(int id, float fitness) { this->id = id; this->fitness = fitness; }
 	void addConnectionMutation();
 	void addNode();
 	static genome crossover(genome parent1, genome parent2);
@@ -42,4 +43,7 @@ public:
 
 	float getFitness() { return fitness; }
 	void setFitness(float fitness) { this->fitness = fitness; }
+
+	int getId() { return id; }
+	void setGlobalId(int value) { globalID = value; }
 };

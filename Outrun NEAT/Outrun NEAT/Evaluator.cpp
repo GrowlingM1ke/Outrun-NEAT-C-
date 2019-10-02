@@ -1,9 +1,11 @@
 #include "Evaluator.h"
 #include <exception>
+#include "genomeSaveLoad.h"
 #define MUTATION_CHANCE 0.5f
 #define ADD_CONNECTION_CHANCE 0.05f
 #define ADD_NODE_CHANCE 0.03f
 #define CROSSOVER_CHANCE 0.75f
+#define POPULATION_SIZE 50
 #define C1 1.0f
 #define C2 1.0f
 #define C3 0.4f
@@ -63,7 +65,6 @@ void evaluator::evaluate1()
 	}
 	scoreAdjustedMap.clear();
 	speciesMap.clear();
-	nextGenerationGenome.clear();
 
 	// Insert genomes into species
 	for (auto gen : genomes) {
@@ -93,23 +94,20 @@ void evaluator::evaluate1()
 		else
 			++it;
 	}
-
-	// Evaluate genomes and assign fitness
-	for (auto gen : genomes) {
-		// WATCH OUT BECAUSE YOU ARE ADDING DATA TO THE WRONG VECTOR
-		//float score = evaluateGenome(gen);
-		//float adjustedScore = score / speciesMap[gen].members.size();
-		// Adjusted score is used because the genome competes with other genomes in the species
-		//gen.setFitness(adjustedScore);
-
-		//speciesMap[gen].addAdjustedFitness(adjustedScore);
-		//scoreAdjustedMap.insert(make_pair(gen, adjustedScore));
-	}
-
-	// removeWeakSpecies();
 }
 
 void evaluator::evaluate2() {
+	// Evaluate genomes and assign fitness
+	for (auto gen : genomes) {
+		float adjustedScore = gen->getFitness() / speciesMap[gen]->members.size();
+		// Adjusted score is used because the genome competes with other genomes in the species
+
+		speciesMap[gen]->addAdjustedFitness(adjustedScore);
+		// scoreAdjustedMap.insert(make_pair(gen, adjustedScore));
+	}
+
+	// removeWeakSpecies();
+
 	// Put best genome from each species into next generation
 	for (auto s : species) {
 		float bestFitness = 0.0f;
@@ -124,7 +122,7 @@ void evaluator::evaluate2() {
 	}
 
 	// Breed new children for the population
-	while (nextGenerationGenome.size() < populationSize) {
+	while (nextGenerationGenome.size() < POPULATION_SIZE) {
 
 		shared_ptr<Species> s = getRandomSpeciesBiasedAdjustedFitness();
 		shared_ptr<genome> child;
@@ -149,25 +147,38 @@ void evaluator::evaluate2() {
 
 		nextGenerationGenome.push_back(child);
 	}
+
+	// Save current generation before moving on
+	genomesSaveLoad::saveGenomes(genomes, currentGeneration++);
+
+	genomes.clear();
+	for (auto genome : nextGenerationGenome) {
+		genomes.push_back(genome);
+	}
+	nextGenerationGenome.clear();
 }
 
-void evaluator::initPopulation(int inputs, int outputs) {
-
-	while (genomes.size() < 5) {
-	shared_ptr<genome> firstMembers = make_shared<genome>();
-	for (int i = 0; i < inputs; i++) {
-		nodeGene node = nodeGene(TYPE::INPUTER);
-		firstMembers->addNode(node);
+void evaluator::initPopulation(int inputs, int outputs, bool load) {
+	if (load) {
+		genomes = genomesSaveLoad::loadGenomes();
 	}
+	else {
+		while (genomes.size() < 5) {
+			shared_ptr<genome> firstMembers = make_shared<genome>();
+			for (int i = 0; i < inputs; i++) {
+				nodeGene node = nodeGene(TYPE::INPUTER);
+				firstMembers->addNode(node);
+			}
 
-	for (int i = 0; i < outputs; i++) {
-		nodeGene node = nodeGene(TYPE::OUTPUT);
-		firstMembers->addNode(node);
-	}
-		
-	firstMembers->addConnectionMutation();
-	firstMembers->addNode();
-	firstMembers->mutation();
-	genomes.push_back(firstMembers);
+			for (int i = 0; i < outputs; i++) {
+				nodeGene node = nodeGene(TYPE::OUTPUT);
+				firstMembers->addNode(node);
+			}
+
+			firstMembers->addConnectionMutation();
+			firstMembers->addNode();
+			firstMembers->mutation();
+			genomes.push_back(firstMembers);
+		}
 	}
 }
