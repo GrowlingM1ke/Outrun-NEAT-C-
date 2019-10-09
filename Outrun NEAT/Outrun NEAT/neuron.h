@@ -31,9 +31,10 @@ public:
 	vector<int> getOutputIds() { return outputIds; }
 	vector<float> getOutputWeights() { return outputWeights; }
 	void reset();
-	// To ensure the values stay small it takes a float and returns a value between -1 and 1
+	// To ensure the values stay small it takes a float and returns a value between 0 and 2
 	float sigmoidActivationFunction(float input) {
-		return ((2.0f / (1.0f + expf(-4.9f * input))) - 1);
+		// return ((2.0f / (1.0f + expf(-4.9f * input))) - 1);
+		return ((1.0f / (1.0f + expf(-4.9f * input))));
 	}
 };
 

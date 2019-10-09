@@ -41,13 +41,10 @@ Video:
 https://youtu.be/KkMZI5Jbf18
 Last Updated: 10/07/2017
 */
-#include "SDL.h"
-#undef main
 #include <iostream>
 #include <string>
 #include "Evaluator.h"
 #include "neuralNetwork.h"
-#include <SDL_ttf.h>
 #include <sstream>
 #include <iomanip>
 
@@ -89,7 +86,7 @@ private:
 	float fSpeed = 0.0f;			// Current player speed
 	float fSavedDistance = 0.0f;			    // if the car doesnt move from position after 2 seconds
 	float fCarSavedPos = 0;
-	
+
 
 	// Create roadblock properties
 	//float fRoadBlockVerticalPosition = 0.0f;
@@ -104,17 +101,6 @@ private:
 
 	list<float> listLapTimes;		// List of previous lap times
 	float fCurrentLapTime;			// Current lap time
-
-	// SDL
-	int acc = 0;
-	TTF_Font* font = TTF_OpenFont("arial.ttf", 24); //this opens a font style and sets a size
-	SDL_Color White = { 255, 255, 255 };  // this is the color in rgb format, maxing out all would give you the color white, and it will be your text's color
-
-	SDL_Color Black = { 0, 0, 0 };
-
-	SDL_Color Red = { 255, 0, 0 };
-
-	SDL_Surface surfaceMessage = *TTF_RenderText_Solid(font, "2", White); // as TTF_RenderText_Solid could only be used on SDL_Surface then you have to create the surface first
 
 	void randomlyGenerateTrack() {
 		// randomly generate track		
@@ -132,134 +118,11 @@ private:
 		for (auto t : vecTrack)
 			fTrackDistance += t.second;
 	}
-	
-	int countNodesByType(genome gen, TYPE type) {
-		int acc = 0;
-		for (nodeGene ng : gen.getNodes()) {
-			if (ng.getTYPE() == type)
-				acc++;
-		}
-		return acc;
-	}
 
-	void drawNodes(genome gen, SDL_Renderer* renderer, int screenSize) {
-		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-		SDL_RenderClear(renderer);
-		// SDL Related variables
-		int nodeSize = screenSize / 25;
-		int connectionSizeBulb = nodeSize / 2;
-		map<int, vector<int>> m;
 
-		SDL_Texture *Message = SDL_CreateTextureFromSurface(renderer, &surfaceMessage); //now you can convert it into a texture
 
-		SDL_Rect rect = SDL_Rect();
+	float generateBiasedRand(float min, float max, bool biased) {
 
-		SDL_Rect Message_rect; //create a rect
-		Message_rect.x = 0;  //controls the rect's x coordinate 
-		Message_rect.y = 0; // controls the rect's y coordinte
-		Message_rect.w = nodeSize; // controls the width of the rect
-		Message_rect.h = nodeSize; // controls the height of the rect
-
-		// Draw the nodes
-		int posInput = 1;
-		int posOutput = 1;
-		for (nodeGene gene : gen.getNodes()) {
-			if (gene.getTYPE() == TYPE::INPUTER) {
-				SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
-				float x = ((float)(posInput / ((float)countNodesByType(gen, TYPE::INPUTER))) * screenSize - nodeSize);
-				float y = screenSize - nodeSize / 2;
-				SDL_Rect rect = SDL_Rect();
-				rect.x = x - nodeSize / 2;
-				rect.y = y - nodeSize / 2;
-				rect.w = nodeSize;
-				rect.h = nodeSize;
-				SDL_RenderFillRect(renderer, &rect);
-
-				m[gene.getId()].push_back((int)x);
-				m[gene.getId()].push_back((int)y);
-				posInput++;
-			}
-			else if (gene.getTYPE() == TYPE::HIDDEN) {
-				int x = rand() % (screenSize - nodeSize * 2) + nodeSize;
-				int y = rand() % (screenSize - nodeSize * 3) + nodeSize * 1.5f;
-				rect.x = x - nodeSize / 2;
-				rect.y = y - nodeSize / 2;
-				rect.w = nodeSize;
-				rect.h = nodeSize;
-				SDL_RenderFillRect(renderer, &rect);
-
-				m[gene.getId()].push_back((int)x);
-				m[gene.getId()].push_back((int)y);
-			}
-			else if (gene.getTYPE() == TYPE::OUTPUT) {
-				float x = ((float)(posOutput)) / ((float)countNodesByType(gen, TYPE::OUTPUT)) * screenSize - nodeSize;
-				float y = nodeSize / 2;
-				rect.x = x - nodeSize / 2;
-				rect.y = y - nodeSize / 2;
-				rect.w = nodeSize;
-				rect.h = nodeSize;
-				SDL_RenderFillRect(renderer, &rect);
-
-				m[gene.getId()].push_back((int)x);
-				m[gene.getId()].push_back((int)y);
-				posOutput++;
-			}
-		}
-
-		for (connectionGene connection : gen.getConnections()) {
-			if (!connection.getExpressed()) {
-				continue;
-			}
-			vector<int> inNode = m[connection.getInNode()];
-			vector<int> outNode = m[connection.getOutNode()];
-
-			int x = (outNode.at(0) - inNode.at(0));
-			int y = (outNode.at(1) - inNode.at(1));
-			SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
-			SDL_RenderDrawLine(renderer, inNode.at(0), inNode.at(1), inNode.at(0) + x, inNode.at(1) + y);
-
-			// Indicate direction
-			SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-			rect.x = inNode.at(0) + x * 0.8f - connectionSizeBulb / 2;
-			rect.y = inNode.at(1) + y * 0.8f - connectionSizeBulb / 2;
-			rect.w = connectionSizeBulb;
-			rect.h = connectionSizeBulb;
-			SDL_RenderFillRect(renderer, &rect);
-
-			// Write down weight
-			std::stringstream stream;
-			stream << std::fixed << std::setprecision(2) << connection.getWeight();
-			string id = stream.str();
-			surfaceMessage = *TTF_RenderText_Solid(font, id.c_str(), White);
-			Message = SDL_CreateTextureFromSurface(renderer, &surfaceMessage);
-			Message_rect.x = inNode.at(0) + x * 0.5f - connectionSizeBulb / 2 * 3;
-			Message_rect.y = inNode.at(1) + y * 0.5f - connectionSizeBulb;
-			Message_rect.w = connectionSizeBulb * 3;
-			Message_rect.h = connectionSizeBulb * 2;
-			SDL_RenderCopy(renderer, Message, NULL, &Message_rect);
-		}
-
-		// Render text
-		for (auto const& x : m)
-		{
-			string id = to_string(x.first);
-			surfaceMessage = *TTF_RenderText_Solid(font, id.c_str(), Black);
-			Message = SDL_CreateTextureFromSurface(renderer, &surfaceMessage);
-			Message_rect.x = x.second.at(0) - nodeSize / 2;
-			Message_rect.y = x.second.at(1) - nodeSize / 2;
-			Message_rect.w = nodeSize;
-			Message_rect.h = nodeSize;
-			SDL_RenderCopy(renderer, Message, NULL, &Message_rect);
-		}
-
-		SDL_RenderPresent(renderer);
-		SDL_DestroyTexture(Message);
-	}
-
-	
-
-	float generateBiasedRand(float min, float max, bool biased) {	
-		
 		if (biased && 0 + (rand() % (1 - 0 + 1)) == 1) {
 			float extremeTrack = 0.75 + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (0.25)));
 			if (0 + (rand() % (1 - 0 + 1)) == 1)
@@ -280,10 +143,6 @@ private:
 		currentGenome = currentPop[genomePos];
 		nn = neuralNetwork(*currentGenome);
 		popSize = currentPop.size();
-
-		// SDL STUFF
-		if (generateNetwork)
-			drawNodes(*currentGenome, getSDLRenderer(), 600);
 	}
 
 	void newRun() {
@@ -303,9 +162,6 @@ private:
 		genomePos++;
 		currentGenome = currentPop[genomePos];
 		nn = neuralNetwork(*currentGenome);
-
-		if (generateNetwork)
-			drawNodes(*currentGenome, getSDLRenderer(), 600);
 
 	}
 
@@ -604,40 +460,16 @@ protected:
 	}
 };
 
-void SDLLoop() {
-	while (true) {
-		SDL_Event e;
-		while (SDL_PollEvent(&e)) {
-			if (e.type == SDL_QUIT) {
-				// Break out of the loop on quit
-				// TTF_Quit();
-				//TTF_CloseFont(font);
-				//SDL_DestroyTexture(Message);
-				//SDL_FreeSurface(surfaceMessage);
-				//break;
-			}
-		}
-	}
-	
-
-}
 
 int main()
 {
-
-	SDL_Init(SDL_INIT_EVERYTHING);
-	SDL_Window* window = SDL_CreateWindow("Genome Representation", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 600, 600, SDL_WINDOW_SHOWN);
-	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, 0);
-	TTF_Init();
-	
-	thread t1(SDLLoop);
 	// Use olcConsoleGameEngine derived app
 	OneLoneCoder_FormulaOLC game;
 	game.ConstructConsole(100, 100, 6, 6);
-	game.Start(renderer);
-	
+	game.Start();
 
-	
+
+
 
 	return 0;
 }

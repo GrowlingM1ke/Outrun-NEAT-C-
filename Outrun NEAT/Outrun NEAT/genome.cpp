@@ -88,19 +88,24 @@ void genome::addConnectionMutation() {
 		}
 			
 
-
+		bool connectionExists = false;
 		// Check if a connection exists already
 		for (connectionGene con : connections) {
 			if (con.getInNode() == node1.getId() && con.getOutNode() == node2.getId()) {
 				attempts++;
-				continue;
+				connectionExists = true;
+				break;
 			}
 			// Maybe other way around
 			else if (con.getInNode() == node2.getId() && con.getOutNode() == node1.getId()) {
 				attempts++;
-				continue;
+				connectionExists = true;
+				break;
 			}
 		}
+
+		if (connectionExists)
+			continue;
 
 		// Create connection
 		connectionGene cg = connectionGene(reversed ? node2.getId() : node1.getId(), reversed ? node1.getId() : node2.getId(), weight, true);

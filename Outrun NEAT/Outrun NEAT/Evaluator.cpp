@@ -1,15 +1,17 @@
 #include "Evaluator.h"
 #include <exception>
 #include "genomeSaveLoad.h"
-#define MUTATION_CHANCE 0.5f
-#define ADD_CONNECTION_CHANCE 0.05f
-#define ADD_NODE_CHANCE 0.03f
-#define CROSSOVER_CHANCE 0.75f
-#define POPULATION_SIZE 50
+#include <algorithm>
+#define MUTATION_CHANCE 0.6f
+#define ADD_CONNECTION_CHANCE 0.1f
+#define ADD_NODE_CHANCE 0.05f
+#define CROSSOVER_CHANCE 0.4f
+#define POPULATION_SIZE 100
 #define C1 1.0f
 #define C2 1.0f
 #define C3 0.4f
 #define THRESHOLD 3.0f
+#define STALE_SPECIES 10
 
 shared_ptr<Species> evaluator::getRandomSpeciesBiasedAdjustedFitness()
 {
@@ -30,15 +32,10 @@ shared_ptr<Species> evaluator::getRandomSpeciesBiasedAdjustedFitness()
 	throw exception("Couldn't find a species.");
 }
 
-// Last thing to do before check
-void evaluator::removeWeakSpecies() {
-	for (auto sp : species) {
-
-	}
-}
 
 
-shared_ptr<genome> evaluator::getRandomGenomeBiasedAdjustedFitness(shared_ptr<Species> s)
+
+genome evaluator::getRandomGenomeBiasedAdjustedFitness(shared_ptr<Species> s)
 {
 	float completeWeight = 0.0f;
 	for (auto g : s->members) {
@@ -50,7 +47,7 @@ shared_ptr<genome> evaluator::getRandomGenomeBiasedAdjustedFitness(shared_ptr<Sp
 	for (auto g : s->members) {
 		countWeight += g->getFitness();
 		if (countWeight >= r) {
-			return g;
+			return *g;
 		}
 	}
 
@@ -61,7 +58,7 @@ void evaluator::evaluate1()
 {
 	// Reset everything for the next generation
 	for (auto s : species) {
-		s.reset();
+		s->resetSpecies();
 	}
 	scoreAdjustedMap.clear();
 	speciesMap.clear();
@@ -86,10 +83,24 @@ void evaluator::evaluate1()
 		}
 	}
 
-	// Remove empty species
+	
+
+	// Identify stale species
+	for (auto s : species) {
+		if (s->mascot->getFitness() == s->staleness && s->mascot->getFitness() != getTopFitness()) {
+			s->incrementStaleness();
+		}
+		else {
+			s->staleness = s->mascot->getFitness();
+			s->incrementStaleness();
+		}
+
+	}
+
+	// Remove empty and stale species
 	auto it = species.begin();
 	while (it != species.end()) {
-		if ((**it).members.size() == 0)
+		if ((**it).members.size() == 0 || (**it).staleness == STALE_SPECIES)
 			it = species.erase(it);
 		else
 			++it;
@@ -106,9 +117,15 @@ void evaluator::evaluate2() {
 		// scoreAdjustedMap.insert(make_pair(gen, adjustedScore));
 	}
 
-	// removeWeakSpecies();
+	// Order the species from lowest average fitness
+	sort(species.begin(), species.end());
+	// In order to not have too many species at a time remove the weak ones
+	while (species.size() > 20) {
+		species.erase(species.begin());
+	}
 
 	// Put best genome from each species into next generation
+	// Add mascot to check
 	for (auto s : species) {
 		float bestFitness = 0.0f;
 		shared_ptr<genome> bestGenome;
@@ -124,14 +141,15 @@ void evaluator::evaluate2() {
 	// Breed new children for the population
 	while (nextGenerationGenome.size() < POPULATION_SIZE) {
 
+		// Make have a look at this in literature review speciaition niching
 		shared_ptr<Species> s = getRandomSpeciesBiasedAdjustedFitness();
-		shared_ptr<genome> child;
+		genome child;
 
 		if ((static_cast <float> (rand()) / static_cast <float> (RAND_MAX)) < CROSSOVER_CHANCE) {
-			shared_ptr<genome> p1 = getRandomGenomeBiasedAdjustedFitness(s);
-			shared_ptr<genome> p2 = getRandomGenomeBiasedAdjustedFitness(s);
+			genome p1 = getRandomGenomeBiasedAdjustedFitness(s);
+			genome p2 = getRandomGenomeBiasedAdjustedFitness(s);
 
-			child = make_shared<genome>(genome::crossover(*p1, *p2));
+			child = (genome::crossover(p1, p2));
 		}
 		else {
 			child = getRandomGenomeBiasedAdjustedFitness(s);
@@ -139,13 +157,13 @@ void evaluator::evaluate2() {
 
 
 		if ((static_cast <float> (rand()) / static_cast <float> (RAND_MAX)) < MUTATION_CHANCE)
-			child->mutation();
+			child.mutation();
 		if ((static_cast <float> (rand()) / static_cast <float> (RAND_MAX)) < ADD_CONNECTION_CHANCE)
-			child->addConnectionMutation();
+			child.addConnectionMutation();
 		if ((static_cast <float> (rand()) / static_cast <float> (RAND_MAX)) < ADD_NODE_CHANCE)
-			child->addNode();
+			child.addNode();
 
-		nextGenerationGenome.push_back(child);
+		nextGenerationGenome.push_back(make_shared<genome>(child));
 	}
 
 	// Save current generation before moving on
@@ -163,22 +181,37 @@ void evaluator::initPopulation(int inputs, int outputs, bool load) {
 		genomes = genomesSaveLoad::loadGenomes();
 	}
 	else {
-		while (genomes.size() < 5) {
-			shared_ptr<genome> firstMembers = make_shared<genome>();
-			for (int i = 0; i < inputs; i++) {
-				nodeGene node = nodeGene(TYPE::INPUTER);
-				firstMembers->addNode(node);
-			}
+		genome firstMember = genome();
+		for (int i = 0; i < inputs; i++) {
+			nodeGene node = nodeGene(TYPE::INPUTER);
+			firstMember.addNode(node);
+		}
 
-			for (int i = 0; i < outputs; i++) {
-				nodeGene node = nodeGene(TYPE::OUTPUT);
-				firstMembers->addNode(node);
-			}
+		for (int i = 0; i < outputs; i++) {
+			nodeGene node = nodeGene(TYPE::OUTPUT);
+			firstMember.addNode(node);
+		}
+		while (genomes.size() < POPULATION_SIZE) {
+			genome gen = firstMember;
+			shared_ptr<genome> firstMembers = make_shared<genome>(gen);
 
 			firstMembers->addConnectionMutation();
-			firstMembers->addNode();
+			if ((static_cast <float> (rand()) / static_cast <float> (RAND_MAX)) < 0.5f)
+				firstMembers->addNode();
 			firstMembers->mutation();
 			genomes.push_back(firstMembers);
 		}
 	}
+}
+
+float evaluator::getTopFitness()
+{
+	float top = 0.0f;
+	for (auto s : species) {
+		if (s->mascot->getFitness() > top)
+			top = s->mascot->getFitness();
+	}
+
+	return top;
+
 }

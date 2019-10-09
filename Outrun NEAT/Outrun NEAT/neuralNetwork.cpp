@@ -62,11 +62,18 @@ vector<float> neuralNetwork::calculate(vector<float> inputParameters)
 	}
 
 	int loops = 0;
+	int maxLoops = 10000;
 	while (unprocessed.size() > 0) {
 		loops++;
-		if (loops > 10000) {
+		if (loops > maxLoops) {
 			cout << "Can't solve network giving up." << endl;
-			throw exception("Can't solve network giving up.");
+
+			vector<float> outputs;
+			for (int i = 0; i < output.size(); i++) {
+				outputs.push_back(0);
+			}
+			return outputs;
+			//throw exception("Can't solve network giving up.");
 		}
 		
 		vector<int> toRemove;

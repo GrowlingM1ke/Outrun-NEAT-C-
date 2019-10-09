@@ -16,9 +16,7 @@ private:
 	vector<shared_ptr<genome>> nextGenerationGenome;
 
 	shared_ptr<Species> getRandomSpeciesBiasedAdjustedFitness();
-	shared_ptr<genome> getRandomGenomeBiasedAdjustedFitness(shared_ptr<Species> s);
-	
-	void removeWeakSpecies();
+	genome getRandomGenomeBiasedAdjustedFitness(shared_ptr<Species> s);
 
 public:
 	void evaluate1();
@@ -26,4 +24,6 @@ public:
 	vector<shared_ptr<genome>> getGenomes() { return genomes; }
 	void initPopulation(int inputs, int outputs, bool load);
 	int getCurrentGeneration() { return currentGeneration; }
+	float getTopFitness();
+	int getNumberOfSpecies() { return species.size(); }
 };
