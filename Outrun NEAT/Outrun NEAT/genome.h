@@ -39,7 +39,7 @@ public:
 	vector<int> getNodeIdSorted();
 
 	float getWeightByIndex(int innovation);
-	static float compatibilityDistance(genome genome1, genome genome2, float c1, float c2, float c3);
+	static float compatibilityDistance(genome genome1, genome genome2, float c1, float c2, float c3, bool removeNodes);
 
 	float getFitness() { return fitness; }
 	void setFitness(float fitness) { this->fitness = fitness; }

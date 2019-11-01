@@ -59,7 +59,12 @@ void genome::addConnectionMutation() {
 	while (attempts < 100) {
 		// First Select 2 random nodes from our list
 		nodeGene node1 = nodes[rand() % nodes.size()];
-		nodeGene node2 = nodes[rand() % nodes.size()];
+		// if nodes size is too big make the other be none input
+		nodeGene node2 = nodes[0];
+		if (nodes.size() > 100)
+			node2 = nodes[rand() % (nodes.size() - 3100) + 3100];
+		else
+			node2 = nodes[rand() % nodes.size()];
 		float weight = -1.0f + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (2.0f)));
 
 		// Check if the node connects to itself
@@ -179,7 +184,7 @@ genome genome::crossover(genome parent1, genome parent2)
 	return child;
 }
 
-float genome::compatibilityDistance(genome genome1, genome genome2, float c1, float c2, float c3)
+float genome::compatibilityDistance(genome genome1, genome genome2, float c1, float c2, float c3, bool removeNodes)
 {
 	int excessGenes = 0;
 	int disjointGenes = 0;
@@ -245,13 +250,17 @@ float genome::compatibilityDistance(genome genome1, genome genome2, float c1, fl
 	}
 
 	// Final formula
-
-	avgWeightDiff = weightDiff / matchingGenes;
+	if (matchingGenes == 0)
+		avgWeightDiff = 0;
+	else
+		avgWeightDiff = weightDiff / matchingGenes;
 
 
 
 	int n = max(genome1.getNodes().size(), genome2.getNodes().size());
 
+	//if (removeNodes);
+	//	n -= 3100;
 
 	if (n < 20) {
 		n = 1;

@@ -3,20 +3,22 @@
 #include "genomeSaveLoad.h"
 #include <iostream>
 #include <algorithm>
-#define MUTATION_CHANCE 0.6f
-#define ADD_CONNECTION_CHANCE 0.1f
-#define ADD_NODE_CHANCE 0.05f
-#define CROSSOVER_CHANCE 0.4f
-#define POPULATION_SIZE 50
+// Taken from https://pastebin.com/ZZmSNaHX
+#define MUTATION_CHANCE 0.25f
+#define ADD_CONNECTION_CHANCE 2.0f
+#define ADD_NODE_CHANCE 0.5f
+#define CROSSOVER_CHANCE 0.75f
+#define POPULATION_SIZE 300
 #define C1 1.0f
 #define C2 1.0f
 #define C3 0.4f
-#define THRESHOLD 3.0f
+#define THRESHOLD 1.0f
 #define STALE_SPECIES 10
 #define STARTING_TEMPERATURE 100.0f
 #define LOSS_OF_TEMPERATURE 0.85f
 
 bool simAnneal = false;
+
 
 shared_ptr<Species> evaluator::getRandomSpeciesBiasedAdjustedFitness()
 {
@@ -73,7 +75,7 @@ void evaluator::evaluate1()
 		bool foundSpecies = false;
 		// Pass the species by reference so the totaladjustedfitness isnt lost
 		for (auto s : species) {
-			float distance = gen->compatibilityDistance(*gen, *s->mascot, C1, C2, C3);
+			float distance = gen->compatibilityDistance(*gen, *s->mascot, C1, C2, C3, false);
 			if (distance < THRESHOLD) {
 				s->members.push_back(gen);
 				speciesMap.insert(make_pair(gen, s));
@@ -89,7 +91,7 @@ void evaluator::evaluate1()
 		}
 	}
 
-	
+
 
 	// Identify stale species
 	for (auto s : species) {
@@ -100,7 +102,6 @@ void evaluator::evaluate1()
 			s->staleness = s->mascot->getFitness();
 			s->incrementStaleness();
 		}
-
 	}
 
 	// Remove empty and stale species
@@ -156,10 +157,10 @@ void evaluator::evaluate2() {
 			genome p1 = getRandomGenomeBiasedAdjustedFitness(s);
 			genome p2 = getRandomGenomeBiasedAdjustedFitness(s2);
 			// if Simulated Annealing type then pick another species
-			float prob = exp(-p1.compatibilityDistance(p1, p2, C1, C2, C3) / (STARTING_TEMPERATURE * powf(LOSS_OF_TEMPERATURE, currentGeneration)));
+			float prob = exp(-p1.compatibilityDistance(p1, p2, C1, C2, C3, false) / (STARTING_TEMPERATURE * powf(LOSS_OF_TEMPERATURE, currentGeneration)));
 			if (!((static_cast <float> (rand()) / static_cast <float> (RAND_MAX)) < prob) || !simAnneal)
 				p2 = getRandomGenomeBiasedAdjustedFitness(s);
-			
+
 
 			child = (genome::crossover(p1, p2));
 		}
@@ -170,8 +171,12 @@ void evaluator::evaluate2() {
 
 		if ((static_cast <float> (rand()) / static_cast <float> (RAND_MAX)) < MUTATION_CHANCE)
 			child.mutation();
-		if ((static_cast <float> (rand()) / static_cast <float> (RAND_MAX)) < ADD_CONNECTION_CHANCE)
+		// Add many links
+		float acc = (static_cast <float> (rand()) / static_cast <float> (RAND_MAX));
+		while (acc < ADD_CONNECTION_CHANCE) {
+			acc += (static_cast <float> (rand()) / static_cast <float> (RAND_MAX));
 			child.addConnectionMutation();
+		}
 		if ((static_cast <float> (rand()) / static_cast <float> (RAND_MAX)) < ADD_NODE_CHANCE)
 			child.addNode();
 
@@ -207,6 +212,7 @@ void evaluator::initPopulation(int inputs, int outputs, bool load) {
 			genome gen = firstMember;
 			shared_ptr<genome> firstMembers = make_shared<genome>(gen);
 
+			firstMembers->addConnectionMutation();
 			firstMembers->addConnectionMutation();
 			if ((static_cast <float> (rand()) / static_cast <float> (RAND_MAX)) < 0.5f)
 				firstMembers->addNode();

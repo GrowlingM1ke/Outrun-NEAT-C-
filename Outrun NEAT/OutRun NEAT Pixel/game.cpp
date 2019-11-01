@@ -76,6 +76,7 @@ private:
 	int genomePos = 0;
 	int popSize;
 	float shortTime;
+	vector<float> inputs;
 	bool pixelInput = true;
 
 
@@ -90,7 +91,7 @@ private:
 	float fSpeed = 0.0f;			// Current player speed
 	float fSavedDistance = 0.0f;			    // if the car doesnt move from position after 2 seconds
 	float fCarSavedPos = 0;
-	
+
 
 	// Create roadblock properties
 	//float fRoadBlockVerticalPosition = 0.0f;
@@ -133,7 +134,7 @@ private:
 		for (auto t : vecTrack)
 			fTrackDistance += t.second;
 	}
-	
+
 	int countNodesByType(genome gen, TYPE type) {
 		int acc = 0;
 		for (nodeGene ng : gen.getNodes()) {
@@ -151,7 +152,7 @@ private:
 		int connectionSizeBulb = nodeSize / 2;
 		map<int, vector<int>> m;
 
-		SDL_Texture *Message = SDL_CreateTextureFromSurface(renderer, &surfaceMessage); //now you can convert it into a texture
+		SDL_Texture* Message = SDL_CreateTextureFromSurface(renderer, &surfaceMessage); //now you can convert it into a texture
 
 		SDL_Rect rect = SDL_Rect();
 
@@ -257,10 +258,10 @@ private:
 		SDL_DestroyTexture(Message);
 	}
 
-	
 
-	float generateBiasedRand(float min, float max, bool biased) {	
-		
+
+	float generateBiasedRand(float min, float max, bool biased) {
+
 		if (biased && 0 + (rand() % (1 - 0 + 1)) == 1) {
 			float extremeTrack = 0.75 + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (0.25)));
 			if (0 + (rand() % (1 - 0 + 1)) == 1)
@@ -335,7 +336,10 @@ protected:
 		// Input: fPlayerPos, fCurvature
 		// Output: Up down left right
 		srand((unsigned)time(NULL));
-		eval.initPopulation(2, 4, false);
+		eval.initPopulation(3100, 4, false);
+		for (int i = 0; i < 3100; i++) {
+			inputs.push_back(0);
+		}
 		newPopRun();
 
 		listLapTimes = { 0,0,0,0,0 };
@@ -366,9 +370,8 @@ protected:
 		int nCarDirection = 0;
 
 		// Put the values into the neural network and receive outputs		
-		vector<float> inputs;
-		inputs.push_back(fCarPos);
-		inputs.push_back(fCurvature);
+		// inputs.push_back(fCarPos);
+		// inputs.push_back(fCurvature);
 		vector<float> outputs = nn.calculate(inputs);
 
 		/*if ((fRoadBlockHorizontalPosition + 75 <= fDistance && fRoadBlockHorizontalPosition + 110 >= fDistance) && (nCarPos + 48 >= nRoadBlockPos && nCarPos +3 <= nRoadBlockPos))
@@ -476,6 +479,9 @@ protected:
 				Draw(x, y, PIXEL_SOLID, FG_DARK_YELLOW);
 		}
 
+		// Clear the inputs
+		inputs.clear();
+
 		// Draw Track - Each row is split into grass, clip-board and track
 		for (int y = 0; y < ScreenHeight() / 2; y++)
 			for (int x = 0; x < ScreenWidth(); x++)
@@ -510,18 +516,28 @@ protected:
 				// Draw the row segments
 				if (x >= 0 && x < nLeftGrass) {
 					Draw(x, nRow, PIXEL_SOLID, nGrassColour);
+					if (y < 31 && pixelInput)
+						inputs.push_back(nGrassColour);
 				}
 				if (x >= nLeftGrass && x < nLeftClip) {
 					Draw(x, nRow, PIXEL_SOLID, nClipColour);
+					if (y < 31 && pixelInput)
+						inputs.push_back(nClipColour);
 				}
 				if (x >= nLeftClip && x < nRightClip) {
 					Draw(x, nRow, PIXEL_SOLID, nRoadColour);
+					if (y < 31 && pixelInput)
+						inputs.push_back(nRoadColour);
 				}
 				if (x >= nRightClip && x < nRightGrass) {
 					Draw(x, nRow, PIXEL_SOLID, nClipColour);
+					if (y < 31 && pixelInput)
+						inputs.push_back(nRightGrass);
 				}
 				if (x >= nRightGrass && x < ScreenWidth()) {
 					Draw(x, nRow, PIXEL_SOLID, nGrassColour);
+					if (y < 31 && pixelInput)
+						inputs.push_back(nGrassColour);
 				}
 				if (x >= (int)(fMiddlePoint * ScreenWidth()) && x <= (int)(fMiddlePoint * ScreenWidth()) + 1)
 					Draw(x, nRow, PIXEL_SOLID, nMiddlePointColour);
@@ -540,6 +556,13 @@ protected:
 		if (fCarPos < -0.92 || fCarPos > 0.92)
 			fCarPos = fOldCarPos;
 		nCarPos = ScreenWidth() / 2 + ((int)(ScreenWidth() * fCarPos) / 2.0) - 7; // Offset for sprite
+
+		if (pixelInput) {
+			for (int i = 0; i < 15; i++) {
+				if (100 * 30 + nCarPos + i < 3100)
+					inputs[100 * 30 + nCarPos + i] = FG_BLACK;
+			}
+		}
 
 		// Draw a car that represents what the player is doing. Apologies for the quality
 		// of the sprite... :-(
@@ -623,7 +646,7 @@ void SDLLoop() {
 			}
 		}
 	}
-	
+
 
 }
 
@@ -634,15 +657,15 @@ int main()
 	SDL_Window* window = SDL_CreateWindow("Genome Representation", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 600, 600, SDL_WINDOW_SHOWN);
 	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, 0);
 	TTF_Init();
-	
+
 	thread t1(SDLLoop);
 	// Use olcConsoleGameEngine derived app
 	OneLoneCoder_FormulaOLC game;
 	game.ConstructConsole(100, 100, 6, 6);
 	game.Start(renderer);
-	
 
-	
+
+
 
 	return 0;
 }
