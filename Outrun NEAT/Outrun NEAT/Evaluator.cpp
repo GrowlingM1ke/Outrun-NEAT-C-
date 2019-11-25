@@ -73,7 +73,7 @@ void evaluator::evaluate1()
 		bool foundSpecies = false;
 		// Pass the species by reference so the totaladjustedfitness isnt lost
 		for (auto s : species) {
-			float distance = gen->compatibilityDistance(*gen, *s->mascot, C1, C2, C3);
+			float distance = gen->compatibilityDistance(*gen, *s->mascot, C1, C2, C3, false);
 			if (distance < THRESHOLD) {
 				s->members.push_back(gen);
 				speciesMap.insert(make_pair(gen, s));
@@ -156,7 +156,7 @@ void evaluator::evaluate2() {
 			genome p1 = getRandomGenomeBiasedAdjustedFitness(s);
 			genome p2 = getRandomGenomeBiasedAdjustedFitness(s2);
 			// if Simulated Annealing type then pick another species
-			float prob = exp(-p1.compatibilityDistance(p1, p2, C1, C2, C3) / (STARTING_TEMPERATURE * powf(LOSS_OF_TEMPERATURE, currentGeneration)));
+			float prob = exp(-p1.compatibilityDistance(p1, p2, C1, C2, C3, false) / (STARTING_TEMPERATURE * powf(LOSS_OF_TEMPERATURE, currentGeneration)));
 			if (!((static_cast <float> (rand()) / static_cast <float> (RAND_MAX)) < prob) || !simAnneal)
 				p2 = getRandomGenomeBiasedAdjustedFitness(s);
 			

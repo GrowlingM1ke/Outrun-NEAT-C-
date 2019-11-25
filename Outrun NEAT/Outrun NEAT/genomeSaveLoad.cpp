@@ -88,6 +88,8 @@ vector<shared_ptr<genome>> genomesSaveLoad::loadGenomes()
 				highestNode = returnHighest(highestNode, stoi(values[i + 2]));
 				i += 3;
 			}
+			else
+				i++;
 		}
 		genomes.push_back(gen);
 	}
